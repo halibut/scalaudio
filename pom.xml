@@ -1,0 +1,201 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.insta-better</groupId>
+  <artifactId>scalaudio</artifactId>
+  <packaging>jar</packaging>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>Scalaudio</name>
+  <url>http://insta-better.org/sarlib</url>
+  <description>Library for sound manipulation.</description>
+  <inceptionYear>2011</inceptionYear>
+  <developers>
+    <developer>
+      <id>kyle</id>
+      <name>Kyle Sweeney</name>
+      <email>kdsweeney@gmail.com</email>
+      <roles>
+         <role>Developer</role>
+      </roles>
+      <organization>insta-better.org</organization>
+      <timezone>-6</timezone>
+    </developer>
+  </developers>
+  
+  <licenses>
+    <license>
+      <name>The Apache Software License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  
+  <!--
+  <scm>
+    <connection>scm:git:git@github.com:juven/git-demo.git</connection>
+    <developerConnection>scm:git:git@github.com:juven/git-demo.git</developerConnection>
+    <url>git@github.com:juven/git-demo.git</url>
+  </scm>
+    -->
+	
+  <organization>
+    <name>instaBetter Software</name>
+    <url>http://insta-better.org</url>
+  </organization>
+  
+  <distributionManagement>
+    <site>
+      <id>scalaudio-site</id>
+      <url>ftp://insta-better.org</url>
+    </site>
+  </distributionManagement>
+
+  <properties>
+	<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	<maven.scala.plugin.version>2.15.2</maven.scala.plugin.version>
+	<scala.version>2.9.1</scala.version>
+	<maven.compiler.source>1.6</maven.compiler.source>
+	<maven.compiler.target>1.6</maven.compiler.target>
+  </properties>
+  
+  <dependencies>
+	<!-- testing dependencies -->
+	<dependency>
+		<groupId>junit</groupId>
+		<artifactId>junit</artifactId>
+		<version>4.5</version>
+		<scope>test</scope>
+	</dependency>
+	<dependency>
+		<groupId>org.scalatest</groupId>
+		<artifactId>scalatest_2.9.0</artifactId>
+		<version>1.6.1</version>
+		<scope>test</scope>
+	</dependency>
+	
+	<!-- scala -->
+	<dependency>
+		<groupId>org.scala-lang</groupId>
+		<artifactId>scala-library</artifactId>
+		<version>${scala.version}</version>
+	</dependency>
+
+	<!-- logging -->
+	<dependency>
+		<groupId>org.slf4j</groupId>
+		<artifactId>slf4j-api</artifactId>
+		<version>1.6.1</version>
+	</dependency>
+	<!-- Logback set as a an optional dependency because it is useful for debugging 
+	in eclipse, but it will not be a transitive dependency for applications 
+	that depend on ParLib. -->
+	<dependency>
+	    <groupId>ch.qos.logback</groupId>
+	    <artifactId>logback-classic</artifactId>
+	    <version>0.9.29</version>
+	    <optional>true</optional>
+	</dependency>
+	
+
+  </dependencies>
+  
+  <build>
+    <plugins>
+	  <plugin>
+		<groupId>org.scala-tools</groupId>
+		<artifactId>maven-scala-plugin</artifactId>
+		<version>${maven.scala.plugin.version}</version>
+		<executions>
+			<execution>
+				<id>compile</id>
+				<goals>
+					<goal>compile</goal>
+					<goal>testCompile</goal>
+				</goals>
+			</execution>
+			<execution>
+				<id>site</id>
+				<phase>site</phase>
+				<goals>
+					<goal>doc</goal>
+				</goals>
+			</execution>
+		</executions>
+		<configuration>
+          <jvmArgs>
+            <jvmArg>-Xms64m</jvmArg>
+            <jvmArg>-Xmx1024m</jvmArg>
+          </jvmArgs>
+        </configuration>
+	  </plugin>
+	
+      <plugin>
+        <artifactId>maven-site-plugin</artifactId>
+        <configuration>
+          <templateDirectory>src/site</templateDirectory>
+          <template>site.vm</template>
+        </configuration>
+      </plugin>
+      
+      <plugin>
+        <groupId>com.mycila.maven-license-plugin</groupId>
+        <artifactId>maven-license-plugin</artifactId>
+        <configuration>
+            <header>src/etc/license-header.txt</header>
+                <failIfMissing>true</failIfMissing>
+                <includes>
+                    <include>src/main/**</include>
+                    <include>src/test/**</include>
+                </includes>
+                <mapping>
+                    <scala>SLASHSTAR_STYLE</scala>
+                </mapping>
+                <properties>
+                    <year>${project.inceptionYear}</year>
+                    <org>${project.organization.name}</org>
+                    <website>${project.organization.url}</website>
+                </properties>
+                <encoding>UTF-8</encoding>
+                <strictCheck>true</strictCheck>
+            </configuration>
+        <executions>
+            <execution>
+                <phase>site</phase>
+                <goals>
+                    <goal>check</goal>
+                </goals>
+            </execution>
+        </executions>
+      </plugin>
+      
+    </plugins>
+    
+    <extensions>
+      <!-- Enabling the use of FTP -->
+      <extension>
+        <groupId>org.apache.maven.wagon</groupId>
+         <artifactId>wagon-ftp</artifactId>
+         <version>1.0-beta-6</version>
+      </extension>
+    </extensions>
+  </build>
+  
+  <reporting>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-project-info-reports-plugin</artifactId>
+        <version>2.1.1</version>
+      </plugin>
+      <plugin>
+        <groupId>org.scala-tools</groupId>
+        <artifactId>maven-scala-plugin</artifactId>
+        <version>${maven.scala.plugin.version}</version>
+        <configuration>
+  			<vscalaVersion>1.0</vscalaVersion>
+		</configuration>
+      </plugin>
+    </plugins>
+  </reporting>
+
+</project>
