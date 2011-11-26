@@ -10,12 +10,8 @@ import javax.sound.sampled.SourceDataLine
 import javax.sound.sampled.DataLine
 
 
-class AudioOut(implicit sp:SignalProperties) extends Component(sp) {
-	val inputs = new SingleLineIOModule[Signal]()
-    val outputs = new NoLineIOModule[Signal]()
-    val controls = new NoLineIOModule[Control]()
-    
-    private var _outputDevice:Option[SourceDataLine] = None
+class AudioOut(numChannels:Int = 2)(implicit sp:SignalProperties) extends Component(sp) with ComponentInputs {
+	private var _outputDevice:Option[SourceDataLine] = None
     private var _skippedSamples = 0L
     
     private var _tempBuffer:Array[Byte] = null
@@ -23,11 +19,13 @@ class AudioOut(implicit sp:SignalProperties) extends Component(sp) {
 	
     def getSkippedSamples() = _skippedSamples
     
+    val audioSignal = new Signal(numChannels)
+	addInput(audioSignal)
+    
     def setOutputDevice(mixer:Mixer){
-	    require(!inputs.lines.isEmpty, "You must define an output signal (line) before setting the output device.")
+	    require(!inputs().isEmpty, "You must define an output signal (line) before setting the output device.")
 	        
-	    val channels = inputs.line.numChannels
-	    val audioFormat = AudioIO.createAudioFormat(sp, channels)
+	    val audioFormat = AudioIO.createAudioFormat(sp, numChannels)
 	    val lineInfo = AudioIO.createOutputLineInfo(sp, audioFormat)
 	    _outputDevice = Option(mixer.getLine(lineInfo).asInstanceOf[SourceDataLine])
 	    _outputDevice.foreach{line =>
@@ -35,12 +33,12 @@ class AudioOut(implicit sp:SignalProperties) extends Component(sp) {
 	        line.start()
 	    }
 	    
-	    _tempBuffer = new Array(sp.bytesPerChannel * channels * (sp.maxDelaySamples / 100).asInstanceOf[Int])
+	    _tempBuffer = new Array(sp.bytesPerChannel * numChannels * (sp.maxDelaySamples / 20).asInstanceOf[Int])
 	}
 	
-    def step(): Unit = {
+    override protected def process(): Unit = {
         _outputDevice.foreach{line =>
-            val signal = inputs.line.read
+            val signal = audioSignal.read
             
             val buffered = line.getBufferSize() - line.available()
             if(buffered < sp.maxDelaySamples){

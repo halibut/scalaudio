@@ -16,11 +16,11 @@ class SineWaveGeneratorTest {
         val channelOut = new Channel()
         val signalOut = new Signal(Vector(channelOut))
         
-        generator.outputs.setLine(signalOut)
+        generator.signalOutput --> signalOut
         generator.setFrequency(100f)
         
         for(i <- 0 until 10000){
-            generator.step()
+            generator.processSignal()
             val freqAdj = 100f / 10000f
             val cycles = i * freqAdj
             val sineInput = (2.0f * math.Pi).asInstanceOf[Float] * cycles
@@ -40,11 +40,11 @@ class SineWaveGeneratorTest {
         val channelOut = new Channel()
         val signalOut = new Signal(Vector(channelOut))
         
-        generator.outputs.setLine(signalOut)
+        generator.signalOutput --> signalOut
         generator.setFrequency(100f)
         
         for(i <- 0 until 10000){
-            generator.step()
+            generator.processSignal()
             val freqAdj = 100f / 10000f
             val cycles = (i+15000) * freqAdj
             val sineInput = (2.0f * math.Pi).asInstanceOf[Float] * cycles

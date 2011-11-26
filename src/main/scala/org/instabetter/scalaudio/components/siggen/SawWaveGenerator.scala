@@ -2,13 +2,14 @@ package org.instabetter.scalaudio
 package components
 package siggen
 
-class SawWaveGenerator(timeOffset:Float = 0f)(implicit sp:SignalProperties) 
-		extends SignalGenerator(sp,timeOffset) {
+class SawWaveGenerator(cycleOffset:Float = 0f)(implicit sp:SignalProperties) 
+		extends SignalGenerator(sp,cycleOffset) {
 
-    def signalFunc(frequency:Float, currentStep:Long):Float = {
-        val remainder = currentStep.asInstanceOf[Float] % frequency
-        
-        -1f + (2.0f * remainder / frequency)
+    signalOutput.name = "Saw Wave Output"
+    signalOutput.description = "The output signal from the saw wave generator."
+    
+    def signalFunc(cycle:Float):Float = {
+        -1f + (2.0f * cycle)
     }
 
 }

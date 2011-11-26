@@ -1,30 +1,31 @@
 package org.instabetter.scalaudio
 package components
 package siggen
+import org.instabetter.scalaudio.components.controls.FrequencyControl
+import org.instabetter.scalaudio.components.controls.AmplitudeOffsetControl
+import org.instabetter.scalaudio.components.controls.GainControl
 
-abstract class SignalGenerator(sp:SignalProperties, timeOffset:Float) extends Component(sp) {
-    val inputs = new NoLineIOModule[Signal]()
-    val outputs = new SingleLineIOModule[Signal]()
-    val controls = new SingleLineIOModule[Control]()
-
-    private var _steps = math.round(timeOffset * sp.sampleRate).asInstanceOf[Long] -1L
+abstract class SignalGenerator(sp:SignalProperties, cycleOffset:Float) 
+	extends Component(sp) with ComponentOutputs with ComponentControls
+	with FrequencyControl {
     
-    val frequencyControl = new Control()
-    frequencyControl.name = "Frequency"
-    frequencyControl.description = "Controls the frequency of the output signal."
-        
-    controls.setLine(frequencyControl)
+    private var _cycle = cycleOffset % 1.0f
     
-    override def step():Unit = {
-        _steps+=1L
+    val signalOutput = new OutputSignal(1)
+    addOutput(signalOutput)
+    
+    override protected def process():Unit = {
+        val signal = signalFunc(_cycle)
         
-        val signal = signalFunc(getFrequency(), _steps)
+        _cycle += getFrequency() * sp.inverseSampleRate
         
-        outputs.lines.foreach(_.write(signal))
+        //Make sure cycle stays between 0 and 1.0
+        if(_cycle > 1.0f)
+            _cycle = _cycle % 1.0f
+        
+        outputs().foreach(_.write(signal))
     }
     
-    protected def signalFunc(frequency:Float, currentStep:Long):Float
+    protected def signalFunc(cyclePos:Float):Float
     
-    def setFrequency(frequency:Float){ frequencyControl.write(frequency) }
-    def getFrequency():Float = { frequencyControl.read }
 }

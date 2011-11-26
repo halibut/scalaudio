@@ -16,14 +16,14 @@ class SquareWaveGeneratorTest {
         val channelOut = new Channel()
         val signalOut = new Signal(Vector(channelOut))
         
-        generator.outputs.setLine(signalOut)
+        generator.signalOutput --> signalOut
         generator.setFrequency(100f)
         
         for(i <- 0 until 10000){
-            generator.step()
+            generator.processSignal()
             val remainder = i % 100
             val expected = if(remainder < 50 ) -1f else 1f
-            assertEquals("Failed for step "+i,expected, channelOut.read(), 0.00001f)
+            assertEquals("Failed for step "+i,expected, channelOut.read(), 0.001f)
         }
 
     }
@@ -37,14 +37,14 @@ class SquareWaveGeneratorTest {
         val channelOut = new Channel()
         val signalOut = new Signal(Vector(channelOut))
         
-        generator.outputs.setLine(signalOut)
+        generator.signalOutput --> signalOut
         generator.setFrequency(100f)
         
         for(i <- 0 until 10000){
-            generator.step()
+            generator.processSignal()
             val remainder = (i+15000) % 100
             val expected = if(remainder < 50 ) -1f else 1f
-            assertEquals("Failed for step "+i,expected, channelOut.read(), 0.00001f)
+            assertEquals("Failed for step "+i,expected, channelOut.read(), 0.001f)
         }      
         
     }

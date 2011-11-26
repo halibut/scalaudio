@@ -16,11 +16,11 @@ class SawWaveGeneratorTest {
         val channelOut = new Channel()
         val signalOut = new Signal(Vector(channelOut))
         
-        generator.outputs.setLine(signalOut)
+        generator.signalOutput --> signalOut
         generator.setFrequency(100f)
         
         for(i <- 0 until 10000){
-            generator.step()
+            generator.processSignal()
             val remainder = i % 100
             val expected = -1f + 2f * (remainder / 100f)
             assertEquals("Failed for step "+i,expected, channelOut.read(), 0.00001f)
@@ -37,11 +37,11 @@ class SawWaveGeneratorTest {
         val channelOut = new Channel()
         val signalOut = new Signal(Vector(channelOut))
         
-        generator.outputs.setLine(signalOut)
+        generator.signalOutput --> signalOut
         generator.setFrequency(100f)
         
         for(i <- 0 until 10000){
-            generator.step()
+            generator.processSignal()
             val remainder = (i+15000) % 100
             val expected = -1f + 2f * (remainder / 100f)
             assertEquals("Failed for step "+i,expected, channelOut.read(), 0.00001f)

@@ -4,19 +4,16 @@ package org.instabetter.scalaudio
 import components.io.AudioIO
 import components.SignalProperties
 import components.siggen.SineWaveGenerator
-import components.sigmod.Gain
-import components.sigmod.AmpOffset
 import components.siggen.SawWaveGenerator
-import components.Signal
-import components.Channel
+import components.siggen.TriangleWaveGenerator
+import components.siggen.SquareWaveGenerator
+import components._
+import components.controls._
 import components.convert.SignalDrivenControl
 import components.io.AudioOut
-import components.Component
-import components.SingleLineIOModule
-import components.MultiLineIOModule
 import javax.sound.sampled.Mixer
-import org.instabetter.scalaudio.components.Control
-import org.instabetter.scalaudio.components.siggen.SquareWaveGenerator
+
+
 
 
 object JSoundTest2 {
@@ -25,7 +22,7 @@ object JSoundTest2 {
         
         implicit val sp = SignalProperties(
                 sampleRate = 44100f,
-                maxDelaySeconds = .2f)
+                maxDelaySeconds = .1f)
     	
         val af = AudioIO.createAudioFormat(sp, 1)
         val outputLineInfo = AudioIO.createOutputLineInfo(sp, af)
@@ -33,35 +30,30 @@ object JSoundTest2 {
         var targetMixer:Mixer = null
         AudioIO.getCompatibleIODevices(outputLineInfo).foreach{mixer =>
             println(mixer.getMixerInfo() + " - " + mixer)
-            if(targetMixer == null){
+            if(mixer.getMixerInfo().toString().contains("Realtek High Definition Audio") && targetMixer == null){
                 targetMixer = mixer
             }
         }
         
         
         //Define the frequency sweep signal generator
-        val freqSweep = new SquareWaveGenerator()
-        freqSweep.setFrequency(.1f)
-        val freqSweepGain = new Gain()
-        freqSweepGain.setGain(100.0f)
-        val freqSweepOffset = new AmpOffset
-        freqSweepOffset.setOffset(300.0f)
-        
-        //Wire the components of the sweep signal generator
-        connect(freqSweep, freqSweepGain, 1)
-        connect(freqSweepGain, freqSweepOffset, 1)
-                
+        //Sweeps between 250-350 Hz every 1/5 second
+        val freqSweep = new SineWaveGenerator() with SignalOutputControls
+        freqSweep.setFrequency(.25f)
+        freqSweep.setGain(200.0f)
+        freqSweep.setAmplitudeOffset(250.0f)
         
         //Define the audio signal generator
-        //and wire the frequency sweep to its frequency control
         val signalGen = new SquareWaveGenerator()
-        connectToControl(freqSweepOffset, signalGen)
         
-        //Define the output device and wire the signal
-        //generator to it
-        val audioOut = new AudioOut()
-        connect(signalGen, audioOut, 1)
+        //Define the output device
+        val audioOut = new AudioOut(1)
         audioOut.setOutputDevice(targetMixer)
+        
+        //Wire the 3 components together
+        freqSweep.signalOutput --> signalGen.frequencyControl
+        signalGen.signalOutput --> audioOut.audioSignal
+        
         
         val startTime = System.nanoTime()
         var curTime = startTime
@@ -73,6 +65,8 @@ object JSoundTest2 {
         val sleepTime = (1000 * sp.maxDelaySeconds / 10).asInstanceOf[Int] 
         
         var lastSkippedSamples = 0L
+        
+        var printTime = 0L 
         while(true){
             val lastTime = curTime
             curTime = System.nanoTime()
@@ -90,15 +84,13 @@ object JSoundTest2 {
             for(i <- 0 until samplesToWrite.asInstanceOf[Int]){
                 //cascade the frequency sweep generator through its signal
                 //modifiers
-                freqSweep.step()
-                freqSweepGain.step()
-                freqSweepOffset.step()
+                freqSweep.processSignal()
                 
                 //Generate the audio frequency
-                signalGen.step()
+                signalGen.processSignal()
                 
                 //Send the audio signal to the output device
-                audioOut.step()
+                audioOut.processSignal()
             }
             
             
@@ -108,48 +100,27 @@ object JSoundTest2 {
                 val skippedSamples = totalSkippedSamples - lastSkippedSamples
                 lastSkippedSamples = totalSkippedSamples
                 
-                println("Samples written: " + printSamples + "  Samples skipped: " + skippedSamples + "     Seconds: " + elapsedSeconds)
+                val avgProcessTime = 0.000001 * printTime / printSamples
+                
+                println("Samples written: " + printSamples 
+                        + "   Samples skipped: " + skippedSamples 
+                        + "   Seconds: " + elapsedSeconds
+                		+ "   Avg Process Time: " + avgProcessTime +" ms")
                 println(signalGen.getFrequency() + " Hz   Samples: " + printSamples + "   Seconds: " + elapsedSeconds)
                 printSamples -= (sp.sampleRate.asInstanceOf[Int]/2).asInstanceOf[Long]
+                printTime = 0L
             }
             
-            val processTime = (0.000000001 * (System.nanoTime() - curTime)).asInstanceOf[Int]
+            val endTime = System.nanoTime()
+            val diffTime = endTime - curTime
+            printTime += diffTime
+            val processTime = (0.000000001 * (diffTime)).asInstanceOf[Int]
             val adjustedSleepTime = sleepTime - processTime
+            
             if(adjustedSleepTime > 0){
             	Thread.sleep(adjustedSleepTime)
             }
         }
     }
     
-    def connect(from:Component, to:Component, channels:Int){
-        val signal = from.outputs match{
-            case outputs:SingleLineIOModule[Signal] =>
-                if(outputs.numLines == 0){
-                    val line = new Signal(channels)
-                    line.name = from.name + " output channel."
-                    outputs.setLine(line)
-                }
-                outputs.line
-        }
-        
-        to.inputs match {
-            case inputs:SingleLineIOModule[Signal] =>
-                inputs.setLine(signal)
-            case inputs:MultiLineIOModule[Signal] =>
-                inputs.addLine(signal)
-        }
-    }
-    
-    def connectToControl(from:Component, to:Component){
-        val control = to.controls match {
-            case controls:SingleLineIOModule[Control] =>
-                controls.line
-        }
-        
-        from.outputs match{
-            case outputs:SingleLineIOModule[Signal] =>
-                outputs.setLine(new SignalDrivenControl(control))
-        }
-    }
-
 }
