@@ -1,0 +1,16 @@
+<document>
+  <properties>
+    <author>Kyle Sweeney</author>
+    <title>ScalAudio</title>
+  </properties>
+  <body>
+    <section name="About">
+      <p>
+      ScalAudio is a library for real-time sound manipulation.
+      </p>
+      <p>
+      It's still in early development, but you can <a href="https://github.com/halibut/scalaudio">check out the source code here</a>.
+      </p>
+    </section>
+  </body>
+</document>

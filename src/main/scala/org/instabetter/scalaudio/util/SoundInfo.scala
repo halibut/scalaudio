@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2011 instaBetter Software <http://insta-better.org>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.instabetter.scalaudio.util
 
 import javax.sound.sampled.AudioSystem
@@ -35,8 +51,8 @@ object SoundInfo {
         
         val mixer = AudioSystem.getMixer(mi)
         val wasOpened = !mixer.isOpen()
-        if(wasOpened)
-            mixer.open()
+//        if(wasOpened)
+//            mixer.open()
         
         val targets = mixer.getTargetLineInfo()
         val sources = mixer.getSourceLineInfo()
@@ -56,8 +72,8 @@ object SoundInfo {
             controls.foreach(control=> printControlInfo("      ", control))
         }
         
-        if(wasOpened)
-            mixer.close()
+//        if(wasOpened)
+//            mixer.close()
     }
     
     private def printLineInfo(prefix:String, lInfo:Line.Info, mixer:Mixer){
@@ -75,7 +91,6 @@ object SoundInfo {
             case info =>
                 println(prefix+"Line: "+info)
         }
-        println(prefix + lInfo)
     }
     
     private def printControlInfo(prefix:String, control:Control){

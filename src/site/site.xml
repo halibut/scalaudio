@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<project name="ParLib">
+  
+  <body>
+    <links>
+      <item name="Maven" href="http://maven.apache.org/"/>
+      <item name="Apache" href="http://www.apache.org/" />
+    </links>
+
+    <menu name="Scalaudio">
+      <item name="About" href="/"/>
+      <item name="Scaladocs" href="/scaladocs/index.html"/>
+    </menu>
+    
+    <menu ref="reports"></menu>
+	
+  </body>
+</project>

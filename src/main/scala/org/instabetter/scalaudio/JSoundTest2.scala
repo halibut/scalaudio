@@ -1,19 +1,28 @@
+/*
+ * Copyright (C) 2011 instaBetter Software <http://insta-better.org>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.instabetter.scalaudio
 
 
-import components.io.AudioIO
-import components.SignalProperties
-import components.siggen.SineWaveGenerator
-import components.siggen.SawWaveGenerator
-import components.siggen.TriangleWaveGenerator
-import components.siggen.SquareWaveGenerator
 import components._
+import components.io._
+import components.siggen._
 import components.controls._
-import components.convert.SignalDrivenControl
-import components.io.AudioOut
+
 import javax.sound.sampled.Mixer
-
-
 
 
 object JSoundTest2 {
@@ -22,10 +31,10 @@ object JSoundTest2 {
         
         implicit val sp = SignalProperties(
                 sampleRate = 44100f,
-                maxDelaySeconds = .1f)
+                maxDelaySeconds = .02f)
     	
-        val af = AudioIO.createAudioFormat(sp, 1)
-        val outputLineInfo = AudioIO.createOutputLineInfo(sp, af)
+        val af = AudioIO.createAudioFormat(sp, 1, true)
+        val outputLineInfo = AudioIO.createOutputLineInfo(af, 3200)
         
         var targetMixer:Mixer = null
         AudioIO.getCompatibleIODevices(outputLineInfo).foreach{mixer =>
@@ -40,8 +49,8 @@ object JSoundTest2 {
         //Sweeps between 250-350 Hz every 1/5 second
         val freqSweep = new SineWaveGenerator() with SignalOutputControls
         freqSweep.setFrequency(.25f)
-        freqSweep.setGain(200.0f)
-        freqSweep.setAmplitudeOffset(250.0f)
+        freqSweep.setGain(100.0f)
+        freqSweep.setAmplitudeOffset(150.0f)
         
         //Define the audio signal generator
         val signalGen = new SquareWaveGenerator()
@@ -53,6 +62,8 @@ object JSoundTest2 {
         //Wire the 3 components together
         freqSweep.signalOutput --> signalGen.frequencyControl
         signalGen.signalOutput --> audioOut.audioSignal
+        
+        val components = List(freqSweep, signalGen, audioOut)
         
         
         val startTime = System.nanoTime()
@@ -81,16 +92,13 @@ object JSoundTest2 {
             
             val samplesToWrite = samplesSinceWait + math.max(0, minBuffer - bufferedSamples)
             bufferedSamples += samplesToWrite - samplesSinceWait
-            for(i <- 0 until samplesToWrite.asInstanceOf[Int]){
-                //cascade the frequency sweep generator through its signal
-                //modifiers
-                freqSweep.processSignal()
-                
-                //Generate the audio frequency
-                signalGen.processSignal()
-                
-                //Send the audio signal to the output device
-                audioOut.processSignal()
+            
+            //Process the signal
+            var loops = 0
+            while(loops < samplesToWrite){
+	            components.foreach(_.processSignal())
+	            components.foreach(_.propogateSignal())
+	            loops+=1
             }
             
             
