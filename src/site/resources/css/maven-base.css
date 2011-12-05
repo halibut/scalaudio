@@ -56,20 +56,20 @@ div.clear hr{
 #legend {
   padding: 8px 0 8px 0;
 }
-#navcolumn {
+#menu {
   padding: 8px 4px 0 8px;
 }
-#navcolumn h5 {
+#menu h5 {
   margin: 0;
   padding: 0;
   font-size: small;
 }
-#navcolumn ul {
+#menu ul {
   margin: 0;
   padding: 0;
   font-size: small;
 }
-#navcolumn li {
+#menu li {
   list-style-type: none;
   background-image: none;
   background-repeat: no-repeat;
@@ -79,16 +79,16 @@ div.clear hr{
   line-height: 1.2em;
   font-size: smaller;
 }
-#navcolumn li.expanded {
+#menu li.expanded {
   background-image: url(../images/expanded.gif);
 }
-#navcolumn li.collapsed {
+#menu li.collapsed {
   background-image: url(../images/collapsed.gif);
 }
 #poweredBy {
   text-align: center;
 }
-#navcolumn img {
+#menu img {
   margin-top: 10px;
   margin-bottom: 3px;
 }
@@ -137,7 +137,7 @@ div.clear hr{
   margin: 0px;
   padding: 0px;
 }
-#navcolumn img.imageLink, .imageLink {
+#menu img.imageLink, .imageLink {
   padding-left: 0px;
   padding-bottom: 0px;
   padding-top: 0px;

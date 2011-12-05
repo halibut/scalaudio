@@ -8,7 +8,7 @@
     </links>
 
     <menu name="Scalaudio">
-      <item name="About" href="/"/>
+      <item name="About" href="/index.html"/>
       <item name="Scaladocs" href="/scaladocs/index.html"/>
     </menu>
     
