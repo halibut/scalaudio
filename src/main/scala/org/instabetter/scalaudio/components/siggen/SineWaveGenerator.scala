@@ -18,8 +18,8 @@ package org.instabetter.scalaudio
 package components
 package siggen
 
-class SineWaveGenerator(cycleOffset:Float = 0f)(implicit sp:SignalProperties) 
-		extends SignalGenerator(sp,cycleOffset) {
+class SineWaveGenerator(sampleRate:Float, cycleOffset:Float = 0f)
+		extends SignalGenerator(sampleRate,cycleOffset) {
 
     private val TWO_PI = math.Pi.asInstanceOf[Float] * 2f
     

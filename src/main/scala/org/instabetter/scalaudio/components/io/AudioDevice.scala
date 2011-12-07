@@ -81,12 +81,15 @@ trait AudioDevice[DL <: DataLine]  {
 	 * Note: A Driver must already be set, and the specified line must
 	 * be available from the driver (Mixer). To get a list of 
 	 * compatible lines @see getAvailabileLines
-	 * @throws IllegalStateException if the line is not compatible with the 
+	 * @throws IllegalArgumentException if the line is not compatible with the 
 	 * configured driver
 	 */
 	def setLine(dataLine:DL){
-	    if(!getAvailabileLines().contains(dataLine)){
-	        throw new IllegalStateException("The specified line is not available from the specified driver.")
+	    val mixer = _jsMixer.getOrElse{
+	        throw new IllegalStateException("You must select a Driver (Mixer) before setting a line.")
+	    }
+	    if(!AudioDevice.lineIsFromDriver(dataLine, mixer)){
+	        throw new IllegalArgumentException("The specified line is not available from the specified driver.")
 	    }
 	    removeLine()
 	    _jsDataLine = Option(dataLine)
@@ -124,6 +127,7 @@ trait AudioDevice[DL <: DataLine]  {
 	        throw new IllegalArgumentException("Not a compatible AudioFormat.")
 	    }
 	    _jsAudioFormat = Some(audioFormat)
+	    audioFormatChanged()
 	}
 	
 	private def removeLine(){
@@ -180,6 +184,8 @@ trait AudioDevice[DL <: DataLine]  {
 	}
 	
 	protected def lineEventHandler(lineEvent:LineEvent){}
+	
+	protected def audioFormatChanged(){}
 }
 
 object AudioDevice {
@@ -275,5 +281,9 @@ object AudioDevice {
                 driver.getLine(lineInfo).asInstanceOf[SourceDataLine]
             }.toSeq 
         }
+    }
+    
+    def lineIsFromDriver(line:DataLine,driver:Mixer):Boolean = {
+        driver.isLineSupported(line.getLineInfo())
     }
 }

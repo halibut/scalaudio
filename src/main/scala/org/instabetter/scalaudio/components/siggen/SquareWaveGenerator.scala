@@ -18,8 +18,8 @@ package org.instabetter.scalaudio
 package components
 package siggen
 
-class SquareWaveGenerator(cycleOffset:Float = 0f)(implicit sp:SignalProperties) 
-		extends SignalGenerator(sp,cycleOffset) {
+class SquareWaveGenerator(sampleRate:Float, cycleOffset:Float = 0f) 
+		extends SignalGenerator(sampleRate,cycleOffset) {
 
     signalOutput.name = "Square Wave Output"
     signalOutput.description = "The output signal from the square wave generator."

@@ -44,6 +44,16 @@ object AudioIO{
 	            bigEndian)
     }
     
+    def createAudioFormat(sampleRate:Float, bytesPerChannel:Int, channels:Int, bigEndian:Boolean):AudioFormat = {
+        new AudioFormat(Encoding.PCM_SIGNED,
+                sampleRate, 
+	            bytesPerChannel * 8, 
+	            channels, 
+	            bytesPerChannel * channels,
+	            sampleRate,
+	            bigEndian)
+    }
+    
     def createOutputLineInfo(af:AudioFormat, bufferSizeInSamples:Int):DataLine.Info = {
         val frameSize = af.getFrameSize();
         new DataLine.Info(classOf[SourceDataLine], af, bufferSizeInSamples * frameSize)

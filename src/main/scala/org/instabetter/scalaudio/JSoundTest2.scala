@@ -29,35 +29,31 @@ object JSoundTest2 {
     
     def main(args:Array[String]){
         
-        implicit val sp = SignalProperties(
-                sampleRate = 44100f,
-                maxDelaySeconds = .02f)
-    	
-        val af = AudioIO.createAudioFormat(sp, 1, true)
-        val outputLineInfo = AudioIO.createOutputLineInfo(af, 3200)
-        
-        var targetMixer:Mixer = null
-        AudioIO.getCompatibleIODevices(outputLineInfo).foreach{mixer =>
-            println(mixer.getMixerInfo() + " - " + mixer)
-            if(mixer.getMixerInfo().toString().contains("Realtek High Definition Audio") && targetMixer == null){
-                targetMixer = mixer
-            }
-        }
-        
+        val sampleRate = 44100f
         
         //Define the frequency sweep signal generator
         //Sweeps between 250-350 Hz every 1/5 second
-        val freqSweep = new SineWaveGenerator() with SignalOutputControls
+        val freqSweep = new SineWaveGenerator(sampleRate) with SignalOutputControls
         freqSweep.setFrequency(.25f)
         freqSweep.setGain(100.0f)
         freqSweep.setAmplitudeOffset(150.0f)
         
         //Define the audio signal generator
-        val signalGen = new SquareWaveGenerator()
+        val signalGen = new SquareWaveGenerator(sampleRate)
         
         //Define the output device
-        val audioOut = new AudioOut(1)
-        audioOut.setOutputDevice(targetMixer)
+        val audioOut = new OutputDevice()
+        audioOut.setPreferredDeviceBufferSize(3000)
+        val outputDriver = audioOut.getAvailableDrivers().find{ driver =>
+            driver.getMixerInfo().toString().contains("Speakers")
+        }.get
+        audioOut.setDriver(outputDriver)
+        val outputLine = audioOut.getAvailabileLines().head
+        audioOut.setLine(outputLine)
+        val outputFormat = AudioIO.createAudioFormat(sampleRate, 2, 1, true)
+        audioOut.setAudioFormat(outputFormat)
+        audioOut.openLine()
+        audioOut.startLine()
         
         //Wire the 3 components together
         freqSweep.signalOutput --> signalGen.frequencyControl
@@ -72,8 +68,8 @@ object JSoundTest2 {
         var printSamples = 0L
         
         var bufferedSamples = 0L
-        val minBuffer = sp.maxDelaySamples / 10
-        val sleepTime = (1000 * sp.maxDelaySeconds / 10).asInstanceOf[Int] 
+        val minBuffer = 441
+        val sleepTime = (10).asInstanceOf[Int] 
         
         var lastSkippedSamples = 0L
         
@@ -85,7 +81,7 @@ object JSoundTest2 {
             val elapsedSeconds = (0.000000001 * elapsedNanos)
             
             val lastSamples = curSample
-            val elapsedSamples = (sp.sampleRate * elapsedSeconds).asInstanceOf[Long]
+            val elapsedSamples = (sampleRate * elapsedSeconds).asInstanceOf[Long]
             
             val samplesSinceWait = elapsedSamples - lastSamples
             curSample = elapsedSamples
@@ -103,7 +99,7 @@ object JSoundTest2 {
             
             
             printSamples += samplesToWrite
-            if(printSamples >= (sp.sampleRate.asInstanceOf[Int]/2)){
+            if(printSamples >= (sampleRate.asInstanceOf[Int]/2)){
                 val totalSkippedSamples = audioOut.getSkippedSamples()
                 val skippedSamples = totalSkippedSamples - lastSkippedSamples
                 lastSkippedSamples = totalSkippedSamples
@@ -115,7 +111,7 @@ object JSoundTest2 {
                         + "   Seconds: " + elapsedSeconds
                 		+ "   Avg Process Time: " + avgProcessTime +" ms")
                 println(signalGen.getFrequency() + " Hz   Samples: " + printSamples + "   Seconds: " + elapsedSeconds)
-                printSamples -= (sp.sampleRate.asInstanceOf[Int]/2).asInstanceOf[Long]
+                printSamples -= (sampleRate.asInstanceOf[Int]/2).asInstanceOf[Long]
                 printTime = 0L
             }
             

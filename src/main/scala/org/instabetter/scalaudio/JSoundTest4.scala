@@ -21,47 +21,44 @@ import components._
 import components.io._
 import components.siggen._
 import components.controls._
-
 import javax.sound.sampled.Mixer
+import javax.sound.sampled.AudioFormat
 
 
 object JSoundTest4 {
     
     def main(args:Array[String]){
         
-        implicit val sp = SignalProperties(
-                sampleRate = 1000f,
-                maxDelaySeconds = .5f)
-    	
-        val af = AudioIO.createAudioFormat(sp, 1, true)
-        val outputLineInfo = AudioIO.createOutputLineInfo(af, 3200)
-        val inputLineInfo = AudioIO.createInputLineInfo(af, 3200)
+        val sampleRate = 44100f
+        val bytesPerSample = 2
         
-        var targetOutputMixer:Mixer = null
-        AudioIO.getCompatibleIODevices(outputLineInfo).foreach{mixer =>
-            println(mixer.getMixerInfo() + " - " + mixer)
-            if(mixer.getMixerInfo().toString().contains("Primary Sound Driver") && targetOutputMixer == null){
-                targetOutputMixer = mixer
-            }
-        }
-        
-        var targetInputMixer:Mixer = null
-        AudioIO.getCompatibleIODevices(inputLineInfo).foreach{mixer =>
-            println(mixer.getMixerInfo() + " - " + mixer)
-            if(mixer.getMixerInfo().toString().contains("Microphone") && targetInputMixer == null){
-                targetInputMixer = mixer
-                println(mixer.getMixerInfo())
-                targetInputMixer.getTargetLineInfo().foreach(line => println("Line: " + line))
-            }
-        }
-        
-        //Define the audio signal generator
-        val audioIn = new AudioIn(1)
-        audioIn.setInputDevice(targetInputMixer)
+        //Define the input device
+        val audioIn = new InputDevice()
+        audioIn.setPreferredDeviceBufferSize(3000)
+        val inputDriver = audioIn.getAvailableDrivers().find{ driver =>
+            driver.getMixerInfo().toString().contains("Microphone")
+        }.get
+        audioIn.setDriver(inputDriver)
+        val inputLine = audioIn.getAvailabileLines().head
+        audioIn.setLine(inputLine)
+        val inputFormat = AudioIO.createAudioFormat(sampleRate, bytesPerSample, 1, true)
+        audioIn.setAudioFormat(inputFormat)
+        audioIn.openLine()
+        audioIn.startLine()
         
         //Define the output device
-        val audioOut = new AudioOut(1)
-        audioOut.setOutputDevice(targetOutputMixer)
+        val audioOut = new OutputDevice()
+        audioOut.setPreferredDeviceBufferSize(3000)
+        val outputDriver = audioOut.getAvailableDrivers().find{ driver =>
+            driver.getMixerInfo().toString().contains("Speakers")
+        }.get
+        audioOut.setDriver(outputDriver)
+        val outputLine = audioOut.getAvailabileLines().head
+        audioOut.setLine(outputLine)
+        val outputFormat = AudioIO.createAudioFormat(sampleRate, bytesPerSample, 1, true)
+        audioOut.setAudioFormat(outputFormat)
+        audioOut.openLine()
+        audioOut.startLine()
         
         //Wire the 2 components together
         audioIn.audioSignal --> audioOut.audioSignal
@@ -75,8 +72,8 @@ object JSoundTest4 {
         var printSamples = 0L
         
         var bufferedSamples = 0L
-        val minBuffer = sp.maxDelaySamples / 10
-        val sleepTime = (1000 * sp.maxDelaySeconds / 10).asInstanceOf[Int] 
+        val minBuffer = 500
+        val sleepTime = (5).asInstanceOf[Int] 
         
         var lastOutputSkippedSamples = 0L
         var lastInputSkippedSamples = 0L
@@ -89,7 +86,7 @@ object JSoundTest4 {
             val elapsedSeconds = (0.000000001 * elapsedNanos)
             
             val lastSamples = curSample
-            val elapsedSamples = (sp.sampleRate * elapsedSeconds).asInstanceOf[Long]
+            val elapsedSamples = (sampleRate * elapsedSeconds).asInstanceOf[Long]
             
             val samplesSinceWait = elapsedSamples - lastSamples
             curSample = elapsedSamples
@@ -109,7 +106,7 @@ object JSoundTest4 {
             
             
             printSamples += samplesToWrite
-            if(printSamples >= (sp.sampleRate.asInstanceOf[Int]/2)){
+            if(printSamples >= (sampleRate.asInstanceOf[Int]/2)){
                 val totalOutputSkippedSamples = audioOut.getSkippedSamples()
                 val skippedOutputSamples = totalOutputSkippedSamples - lastOutputSkippedSamples
                 lastOutputSkippedSamples = totalOutputSkippedSamples
@@ -126,7 +123,7 @@ object JSoundTest4 {
                         + "   Seconds: " + elapsedSeconds
                 		+ "   Avg Process Time: " + avgProcessTime +" ms")
                 
-                printSamples -= (sp.sampleRate.asInstanceOf[Int]/2).asInstanceOf[Long]
+                printSamples -= (sampleRate.asInstanceOf[Int]/2).asInstanceOf[Long]
                 printTime = 0L
             }
             

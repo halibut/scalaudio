@@ -16,48 +16,69 @@
 
 package org.instabetter.scalaudio
 package components
+import scala.collection.mutable.ArrayBuffer
 
-class Signal(val numChannels:Int = 1) extends Line{
+class Signal(numChannels:Int = 1) extends Line{
     require(numChannels > 0, "A signal must contain 1 or more channels")
     
-    private val channels = new Array[Float](numChannels)
+    private var _channels = new Array[Float](numChannels)
+    private val _propertyChangeListeners:ArrayBuffer[Function1[Signal,Unit]] = ArrayBuffer()
+    
+    def setNumChannels(numChannels:Int){
+        require(numChannels > 0, "A signal must contain 1 or more channels")
+        if(numChannels != _channels.size ){
+            _channels = new Array[Float](numChannels)
+            for(listener <- _propertyChangeListeners){
+                listener(this)
+            }
+        }
+    }
+    
+    def channels():Int = { _channels.size }
+    
+    def addPropertyChangeListener(listener:(Signal)=>Unit){
+        _propertyChangeListeners += listener
+    }
+    def removePropertyChangeListener(listener:(Signal)=>Unit){
+        _propertyChangeListeners -= listener
+    }
     
     def write(signalValue:Float){
         var i = 0
-        while(i < numChannels){
-            channels(i) = signalValue
+        while(i < _channels.size){
+            _channels(i) = signalValue
             i+=1
         }
     }
     
     def write(channelValues:Array[Float]){
-        Array.copy(channelValues, 0, channels, 0, numChannels)
+        Array.copy(channelValues, 0, _channels, 0, _channels.size)
     }
     
     def read():Array[Float] = {
-        channels.clone()
+        _channels.clone()
     }
     
     def readAt(index:Int):Float = {
-        channels(index)
+        _channels(index)
     }
     
     def updateFrom(otherSignal:Signal){
-        Array.copy(otherSignal.channels, 0, channels, 0, numChannels)
+        Array.copy(otherSignal._channels, 0, _channels, 0, _channels.size)
     }
 
     def combineWith(otherSignal:Signal)(combineFunc:(Float,Float)=>Float){
         var i = 0
-        while(i < numChannels){
-            channels(i) = combineFunc(channels(i), otherSignal.channels(i))
+        while(i < _channels.size){
+            _channels(i) = combineFunc(_channels(i), otherSignal._channels(i))
             i+=1
         }
     }
     
     def modify(modifyFunc:(Float)=>Float){
         var i = 0
-        while(i < numChannels){
-            channels(i) = modifyFunc(channels(i))
+        while(i < _channels.size){
+            _channels(i) = modifyFunc(_channels(i))
             i+=1
         }
     }

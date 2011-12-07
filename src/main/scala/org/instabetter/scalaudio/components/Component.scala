@@ -19,7 +19,7 @@ package components
 
 import controls._
 
-abstract class Component(val signalProperties:SignalProperties) extends Identity{
+trait Component extends Identity{
     
     protected def preProcess():Unit = {};
     protected def process():Unit;

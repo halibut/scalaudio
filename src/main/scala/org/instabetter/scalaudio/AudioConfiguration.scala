@@ -18,7 +18,7 @@ package org.instabetter.scalaudio
 
 import components._
 
-trait Configuration {
+trait AudioConfiguration {
 	protected var _components:Vector[Component] = Vector()
 	
 	def addComponent(component:Component){

@@ -26,9 +26,17 @@ class OutputSignal(numChannels:Int = 1) extends Signal(numChannels){
         _wires.foreach{ _.updateFrom(this) }
     }
     
-    def wireTo(signal:Signal){ _wires :+= signal }
+    def wireTo(signal:Signal){ 
+        _wires :+= signal
+        signal.addPropertyChangeListener(wirePropertyChangeListener)
+    }
     def wireTo(control:FloatControl){ wireTo(new SignalDrivenControl(control)) }
     def -->(signal:Signal){ wireTo(signal) }
     def -->(control:FloatControl){ wireTo(control) }
     
+    
+    def wirePropertyChangeListener(wire:Signal){
+        _wires = _wires.filterNot(_ == wire)
+        wire.removePropertyChangeListener(wirePropertyChangeListener)
+    }
 }

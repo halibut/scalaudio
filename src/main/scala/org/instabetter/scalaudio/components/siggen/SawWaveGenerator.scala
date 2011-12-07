@@ -18,8 +18,8 @@ package org.instabetter.scalaudio
 package components
 package siggen
 
-class SawWaveGenerator(cycleOffset:Float = 0f)(implicit sp:SignalProperties) 
-		extends SignalGenerator(sp,cycleOffset) {
+class SawWaveGenerator(sampleRate:Float, cycleOffset:Float = 0f) 
+		extends SignalGenerator(sampleRate,cycleOffset) {
 
     signalOutput.name = "Saw Wave Output"
     signalOutput.description = "The output signal from the saw wave generator."

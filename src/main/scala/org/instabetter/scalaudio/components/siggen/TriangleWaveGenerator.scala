@@ -18,8 +18,8 @@ package org.instabetter.scalaudio
 package components
 package siggen
 
-class TriangleWaveGenerator(cycleOffset:Float = 0f)(implicit sp:SignalProperties) 
-		extends SignalGenerator(sp,cycleOffset) {
+class TriangleWaveGenerator(sampleRate:Float, cycleOffset:Float = 0f)
+		extends SignalGenerator(sampleRate,cycleOffset) {
 
     signalOutput.name = "Triangle Wave Output"
     signalOutput.description = "The output signal from the triangle wave generator."

@@ -21,9 +21,10 @@ import org.instabetter.scalaudio.components.controls.FrequencyControl
 import org.instabetter.scalaudio.components.controls.AmplitudeOffsetControl
 import org.instabetter.scalaudio.components.controls.GainControl
 
-abstract class SignalGenerator(sp:SignalProperties, cycleOffset:Float) 
-	extends Component(sp) with ComponentOutputs with ComponentControls
+abstract class SignalGenerator(val sampleRate:Float, cycleOffset:Float) 
+	extends Component with ComponentOutputs with ComponentControls
 	with FrequencyControl {
+    private val inverseSampleRate = 1.0f / sampleRate
     
     private var _cycle = cycleOffset % 1.0f
     
@@ -33,7 +34,7 @@ abstract class SignalGenerator(sp:SignalProperties, cycleOffset:Float)
     override protected def process():Unit = {
         val signal = signalFunc(_cycle)
         
-        _cycle += getFrequency() * sp.inverseSampleRate
+        _cycle += getFrequency() * inverseSampleRate
         
         //Make sure cycle stays between 0 and 1.0
         if(_cycle > 1.0f)
