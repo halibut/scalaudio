@@ -22,7 +22,22 @@ import scala.collection.Seq
 import javax.sound.sampled.SourceDataLine
 import javax.sound.sampled.Mixer
 
-class OutputDevice(val blockOnOutputDevice:Boolean = false) extends Component with ComponentInputs with AudioDevice[SourceDataLine] {
+/**
+ * A Component that sends an audio signal to an output audio device like speakers or a line-out.
+ * This component optionally blocks when sending audio to the output device. This can occur
+ * when more data is written to the output device buffer than can be sent to the physical 
+ * hardware (speakers, etc...). Blocking can be useful if the audio signal is not synchronized
+ * with the output device sample rate, such as when reading audio data from a file.
+ * 
+ * There will always be some output latency. The actual latency is governed by the 
+ * audio driver (and underlying audio output hardware). 
+ *
+ * @param blockOnOutputDevice Tells the component to block if the output device's buffer
+ * becomes full. If false, then it's possible that the output device might skip samples
+ * in the audio sample
+ */
+class OutputDevice(val blockOnOutputDevice:Boolean = false) 
+	extends Component with ComponentInputs with ComponentControls with AudioDevice[SourceDataLine] {
 	private val INTERNAL_BUFFER_SIZE = 8
 	private var _internalBuffer:Array[Byte] = null
 	private var _internalBufferPos = 0
@@ -39,7 +54,7 @@ class OutputDevice(val blockOnOutputDevice:Boolean = false) extends Component wi
     
     override def audioFormatChanged(){
         val currentChannels = audioSignal.channels()
-        val audioFormat = _jsAudioFormat.get
+        val audioFormat = getAudioFormat().get
         val newChannels = audioFormat.getChannels()
         
         if(currentChannels != newChannels){
@@ -50,33 +65,47 @@ class OutputDevice(val blockOnOutputDevice:Boolean = false) extends Component wi
         _internalBufferPos = 0
     }
 	
-    override def getAvailableDrivers():Seq[Mixer] = {
+    override protected def getAvailableDrivers():IndexedSeq[Mixer] = {
         AudioDevice.getOutputDrivers()
     }
 
-    override protected def internalGetDeviceLines():Seq[SourceDataLine] = {
-        AudioDevice.getOutputDevices(_jsMixer.get).getOrElse(Seq())   
+    override protected def internalGetDeviceLines():IndexedSeq[SourceDataLine] = {
+        AudioDevice.getOutputDevices(getDriver().get).getOrElse(IndexedSeq())   
     }
 
     override protected def internalOpenLine(): Unit = {
-        val line = _jsDataLine.get
-        val audioFormat = _jsAudioFormat.get
+        val line = getLine().get
+        val audioFormat = getAudioFormat().get
         
         line.open(audioFormat, _preferredDeviceBufferSize * audioFormat.getFrameSize())
     }
 
     def getSkippedSamples() = _skippedSamples
     
+    override def unpause(){
+        getLine().foreach{line =>
+            line.start()
+        }
+    }
+    
+    override def pause(){
+        getLine().foreach{line =>
+            line.stop()
+            line.flush()
+        }
+    }
+    
     override protected def process(): Unit = {
-        if(_jsDataLine.isEmpty || !_jsDataLine.get.isOpen())
+        val lineOpt = getLine()
+        if(lineOpt.isEmpty || !lineOpt.get.isOpen())
             throw new IllegalStateException("An output device must be selected and opened before it can be written to.")
         
         //Get the Float array to write to the output device
         val signal = audioSignal.read()
         
         //Get a reference to the SourceDataLine (the device to output to)
-        val line = _jsDataLine.get
-        val audioFormat = _jsAudioFormat.get
+        val line = lineOpt.get
+        val audioFormat = getAudioFormat().get
         val frameSize = audioFormat.getFrameSize()
         val internalBufferSize = _internalBuffer.size
         

@@ -18,6 +18,7 @@ package org.instabetter.scalaudio
 package components
 package io
 
+import components.controls._
 import javax.sound.sampled.Mixer
 import javax.sound.sampled.DataLine
 import javax.sound.sampled.AudioSystem
@@ -30,9 +31,7 @@ import javax.sound.sampled.LineEvent
 import javax.sound.sampled.AudioFormat
 
 trait AudioDevice[DL <: DataLine]  {
-	protected var _jsMixer:Option[Mixer] = None
-	protected var _jsDataLine:Option[DL] = None
-	protected var _jsAudioFormat:Option[AudioFormat] = None
+self:Component with ComponentControls =>
 	protected var _preferredDeviceBufferSize:Int = 6000
 	
 	private val _lineListener = new LineListener{
@@ -41,118 +40,120 @@ trait AudioDevice[DL <: DataLine]  {
 	    }
 	} 
 
+	//Setup controls for selecting driver, line, and audio format
+	{
+	    //Selection for the driver
+	    val driverControl = new EnumControl[Mixer](getAvailableDrivers()){
+	        name = "Driver"
+	        description = "Select the driver for this AudioDevice"
+	        private var lineControl:EnumControl[DL] = null
+	        override def onChangeValue(driver:Mixer){
+	            stop()
+	            if(lineControl != null){
+	                removeControl(lineControl)
+	            }
+	            
+	            //Selection for the Line
+	            lineControl = new EnumControl[DL](internalGetDeviceLines()){
+	                name = "Line"
+	                description = "Select the Line for this AudioDevice"
+	                private var audioFormatControl:EnumControl[AudioFormat] = null
+	                override def onChangeValue(line:DL){
+	                    stop()
+	                    if(audioFormatControl != null){
+	                        removeControl(audioFormatControl)
+	                    }
+	                    
+	                    //Selection for the AudioFormat
+	                    audioFormatControl = new EnumControl(getAvailableAudioFormats()){
+	                        name = "Audio Format"
+	                        description = "Select the audio format for this AudioDevice"
+	                            
+	                        //Override equals function to disallow NOT_SPECIFIED values for anything
+	                        override def enumsEqual(option:AudioFormat, test:AudioFormat):Boolean = {
+	                            val baseMatches = 
+	                                getLine().get.getLineInfo().asInstanceOf[DataLine.Info].isFormatSupported(test)
+	                            val found = baseMatches &&
+	                            	test.getChannels() != AudioSystem.NOT_SPECIFIED &&
+	                            	test.getEncoding() == AudioFormat.Encoding.PCM_SIGNED &&
+	                            	test.getFrameRate() != AudioSystem.NOT_SPECIFIED &&
+	                            	test.getSampleRate() != AudioSystem.NOT_SPECIFIED &&
+	                            	test.getFrameSize() != AudioSystem.NOT_SPECIFIED &&
+	                            	test.getSampleSizeInBits() != AudioSystem.NOT_SPECIFIED
+	                            
+	                            found
+	                        }
+	                        
+	                        override def onChangeValue(audioFormat:AudioFormat){
+	                            audioFormatChanged()
+	                        }
+	                    }
+	                    addControl(audioFormatControl)
+	                }
+	            }
+	            addControl(lineControl)
+	        }
+	    }
+	    addControl(driverControl)
+	}
+	
 	/**
 	 * Returns a Seq of available Drivers (Mixers) for the AudioDevice
 	 */
-	def getAvailableDrivers():Seq[Mixer]
-	
-	/**
-	 * Sets the Driver (Mixer) that the device will use
-	 */
-	def setDriver(driver:Mixer){
-	    _jsMixer.foreach{ existingMixer => removeLine() }
-	    _jsMixer = Option(driver)
-	}
-	
-	/**
-	 * Return the configured driver (mixer)
-	 */
-	def getDriver():Option[Mixer] = { _jsMixer }
-	
-	/**
-	 * Returns a Seq of lines that are available from the selected Driver.
-	 */
-	def getAvailabileLines():Seq[DL] = {
-	    if(_jsMixer.isEmpty){
-	        throw new IllegalStateException("You must select a Driver (Mixer) before getting available lines.")
-	    }
-	    
-	    internalGetDeviceLines()
-	}
-	
-	/**
+	protected def getAvailableDrivers():IndexedSeq[Mixer]
+
+		/**
 	 * Subclasses should implement this method which returns all
 	 * the lines for the selected mixer. 
 	 */
-	protected def internalGetDeviceLines():Seq[DL]
-	
-	/**
-	 * Set the line that will be used by the AudioDevice
-	 * Note: A Driver must already be set, and the specified line must
-	 * be available from the driver (Mixer). To get a list of 
-	 * compatible lines @see getAvailabileLines
-	 * @throws IllegalArgumentException if the line is not compatible with the 
-	 * configured driver
-	 */
-	def setLine(dataLine:DL){
-	    val mixer = _jsMixer.getOrElse{
-	        throw new IllegalStateException("You must select a Driver (Mixer) before setting a line.")
-	    }
-	    if(!AudioDevice.lineIsFromDriver(dataLine, mixer)){
-	        throw new IllegalArgumentException("The specified line is not available from the specified driver.")
-	    }
-	    removeLine()
-	    _jsDataLine = Option(dataLine)
-	    dataLine.addLineListener(_lineListener)
-	}
-	
+	protected def internalGetDeviceLines():IndexedSeq[DL]
+
 	/**
 	 * Returns a Seq of AudioFormat objects that are compatible with
 	 * the configured line.
 	 * @throws IllegalStateException if there is no configured line
 	 */
-	def getAvailableAudioFormats():Seq[AudioFormat] = {
-	    val line = _jsDataLine.getOrElse{
-	        throw new IllegalStateException("You must set a line before trying to retrieve AudioFormats.")
-	    }
-	    line.getLineInfo().asInstanceOf[DataLine.Info].getFormats()
+	protected def getAvailableAudioFormats():IndexedSeq[AudioFormat] = {
+	    getLineControl.get.getValue.get.getLineInfo().asInstanceOf[DataLine.Info].getFormats()
 	}
 	
 	/**
-	 * Set the specified AudioFormat for the configured line
-	 * @throws IllegalStateException if there is no configured line.
-	 * @throws IllegalArgumentException if the audioFormat is not compatible 
-	 * with the configured line, or if the AudioFormat has an unknown
-	 * sampleRate, or number of channels. 
+	 * Return the configured driver (mixer)
 	 */
-	def setAudioFormat(audioFormat:AudioFormat){
-	    val line = _jsDataLine.getOrElse{
-	        throw new IllegalStateException("You must hava a line configured before setting the AudioFormat.")
-	    }
-	    if(audioFormat.getChannels() == AudioSystem.NOT_SPECIFIED ||
-	            audioFormat.getSampleRate() == AudioSystem.NOT_SPECIFIED){
-	        throw new IllegalArgumentException("You must specify the number of channels and sample rate.")
-	    }
-	    if(!line.getLineInfo().asInstanceOf[DataLine.Info].isFormatSupported(audioFormat)){
-	        throw new IllegalArgumentException("Not a compatible AudioFormat.")
-	    }
-	    _jsAudioFormat = Some(audioFormat)
-	    audioFormatChanged()
+	def getDriverControl():Option[EnumControl[Mixer]] = { 
+	    getControl("Driver").map(_.asInstanceOf[EnumControl[Mixer]]) 
 	}
 	
-	private def removeLine(){
-	    stopLine()
-	    closeLine()
-	    _jsAudioFormat = None
-	    _jsDataLine.foreach{ line => line.removeLineListener(_lineListener) }
-	    _jsDataLine = None
+	protected def getDriver():Option[Mixer] = {
+	    getDriverControl().flatMap(_.getValue())
 	}
 	
 	/**
-	 * Open the line with the configured AudioFormat. The line will be in the stopped state.
-	 * If the line was previously opened or started, it will be stopped and closed before re-opening.
-	 * @throws IllegalStateException if an AudioFormat or a line hasn't been set.
+	 * Return the configured Line
 	 */
-	def openLine(){
-	    stopLine()
-	    closeLine()
-	    val audioFormat = _jsAudioFormat.getOrElse{
-	        throw new IllegalStateException("You must set an AudioFormat before you can open the line.")
-	    }
-	    val line = _jsDataLine.getOrElse{
-	        throw new IllegalStateException("A line must be set before you can open it.")
-	    }
-	    internalOpenLine()
+	def getLineControl():Option[EnumControl[DL]] = { 
+	    getControl("Line").map(_.asInstanceOf[EnumControl[DL]]) 
+	}
+	
+	protected def getLine():Option[DL] = {
+	    getLineControl().flatMap(_.getValue())
+	}
+	
+	/**
+	 * Return the configured driver AudioFormat
+	 */
+	def getAudioFormatControl():Option[EnumControl[AudioFormat]] = { 
+	    getControl("Audio Format").map(_.asInstanceOf[EnumControl[AudioFormat]]) 
+	}
+	
+	protected def getAudioFormat():Option[AudioFormat] = {
+	    getAudioFormatControl().flatMap(_.getValue())
+	}
+	
+	def setupDevice(driver:Mixer, line:DL, audioFormat:AudioFormat){
+	    getDriverControl().get.setValue(driver)
+	    getLineControl().get.setValue(line)
+	    getAudioFormatControl().get.setValue(audioFormat)
 	}
 	
 	/**
@@ -160,21 +161,6 @@ trait AudioDevice[DL <: DataLine]  {
 	 * need to be passed in while opening
 	 */
 	protected def internalOpenLine();
-	
-	/**
-	 * Starts the line. Does nothing if no line is configured.
-	 */
-	def startLine(){ _jsDataLine.foreach{line => line.start()} }
-	
-	/**
-	 * Stops the line. Does nothing if no line is configured.
-	 */
-	def stopLine(){ _jsDataLine.foreach{line => line.stop()} }
-	
-	/**
-	 * Closes the line. Does nothing if no line is configured.
-	 */
-	def closeLine(){ _jsDataLine.foreach{line => line.close()} }
 	
 	/**
 	 * Set the preferred number of samples for the device to buffer.
@@ -186,6 +172,22 @@ trait AudioDevice[DL <: DataLine]  {
 	protected def lineEventHandler(lineEvent:LineEvent){}
 	
 	protected def audioFormatChanged(){}
+	
+	
+	override def start(){
+	    getLine().foreach{line =>
+	        internalOpenLine()
+	        unpause();
+	    }
+	}
+	
+	override def stop(){
+	    getLine().foreach{line =>
+	        pause();
+	        line.close();
+	    }
+	}
+
 }
 
 object AudioDevice {
@@ -240,46 +242,46 @@ object AudioDevice {
     /**
      * Get the list of input drivers (Mixers with input lines)
      */
-    def getInputDrivers():Seq[Mixer] = {
+    def getInputDrivers():IndexedSeq[Mixer] = {
         if(_inputDevices.isEmpty)
             refreshDevicesList()
         _inputDevices.get.keySet.map{mixerInfo =>
             AudioSystem.getMixer(mixerInfo)
-        }.toSeq
+        }.toIndexedSeq
     }
     
     /**
      * Get the list of output drivers (Mixers with output lines)
      */
-    def getOutputDrivers():Seq[Mixer] = {
+    def getOutputDrivers():IndexedSeq[Mixer] = {
         if(_outputDevices.isEmpty)
             refreshDevicesList()
         _outputDevices.get.keySet.map{mixerInfo =>
             AudioSystem.getMixer(mixerInfo)
-        }.toSeq
+        }.toIndexedSeq
     }
     
     /**
      * Get the input devices available for the specified driver.
      */
-    def getInputDevices(driver:Mixer):Option[Seq[TargetDataLine]] = {
+    def getInputDevices(driver:Mixer):Option[IndexedSeq[TargetDataLine]] = {
         val devicesOption = _inputDevices.get.get(driver.getMixerInfo())
         devicesOption.map{ devices => 
             devices.map{ lineInfo => 
                 driver.getLine(lineInfo).asInstanceOf[TargetDataLine]
-            }.toSeq 
+            }.toIndexedSeq 
         }
     }
     
     /**
      * Get the output devices available for the specified driver.
      */
-    def getOutputDevices(driver:Mixer):Option[Seq[SourceDataLine]] = {
+    def getOutputDevices(driver:Mixer):Option[IndexedSeq[SourceDataLine]] = {
         val devicesOption = _outputDevices.get.get(driver.getMixerInfo())
         devicesOption.map{ devices => 
             devices.map{ lineInfo => 
                 driver.getLine(lineInfo).asInstanceOf[SourceDataLine]
-            }.toSeq 
+            }.toIndexedSeq 
         }
     }
     

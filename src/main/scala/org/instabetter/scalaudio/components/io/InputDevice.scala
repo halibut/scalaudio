@@ -22,55 +22,107 @@ import scala.collection.Seq
 import javax.sound.sampled.Mixer
 import javax.sound.sampled.TargetDataLine
 
-class InputDevice(val blockOnInputDevice:Boolean = false) extends Component with ComponentOutputs with AudioDevice[TargetDataLine] {
-	private val INTERNAL_BUFFER_SIZE = 8
+/**
+ * A Component that reads input from an audio device like a microphone or a line-in.
+ * This component blocks while waiting for input. Since the input is buffered, 
+ * there will always be some input latency. The actual latency is governed by the 
+ * audio driver (and underlying audio capture hardware). The latency can be
+ * affected somewhat by the parameters maxBufferedSamples and initBufferedSamples.
+ * 
+ * @param samplesPerRead controls how many samples will be read from the input device at 
+ * a time. Lower numbers reduce the latency, larger numbers reduce the amount of native
+ * calls to the underlying OS. This also affects the blocking nature of the InputDevice.
+ * A value of 1 for samplesPerRead could potentially cause the processSignal() method to
+ * block for every sample, while a value of 8 would only block every 8 samples. 
+ * @param initBufferedSampes Sets the initial number of samples that will be buffered
+ * before the InputDevice starts sending data to the output signal. Higher numbers add
+ * more latency, but can increase throughput of the entire AudioConfiguration that the
+ * InputDevice is a part of because it helps alleviate the unstable CPU scheduling
+ * that occurs in a non-realtime operating system.
+ * @param maxBufferedSamples The maximum number of samples to buffer before the component
+ * starts dropping parts of the audio signal. A lower number reduces the maximum (software) 
+ * latency that the component adds to the overall (hardware + software) latency of the 
+ * input device. But beware that setting it too low might result in "skipping" of the
+ * input audio.
+ */
+class InputDevice(val samplesPerRead:Int = 8, val initBufferedSamples:Int = 64, val maxBufferedSamples:Int=3000) 
+		extends Component with ComponentOutputs with ComponentControls with AudioDevice[TargetDataLine] {
+    
+    require((1 <= samplesPerRead) && 
+            (samplesPerRead <= initBufferedSamples) &&
+            (initBufferedSamples <= maxBufferedSamples), 
+            "Relationship between samplesPerRead, initBufferedSamples, and maxBufferedSamples must be: "+
+            "1 <= samplesPerRead <= initBufferedSamples <= maxBufferedSamples; But found: samplesPerRead: "+
+            samplesPerRead+", initBufferedSampes:"+initBufferedSamples+", maxBufferedSamples:"+maxBufferedSamples)
+    
 	private var _internalBuffer:Array[Byte] = null
 	private var _internalBufferPos = 0
 	private var _skippedSamples = 0L
 	private var _sampleArray:Array[Float] = null
 	
-	//Create the audio signal that contains the data to send to the output device
+	//Create the audio signal that stores the data read from the input device
     val audioSignal = new OutputSignal(1)
     addOutput(audioSignal)
     
     override def audioFormatChanged(){
         val currentChannels = audioSignal.channels()
-        val audioFormat = _jsAudioFormat.get
+        val audioFormat = getAudioFormat().get
         val newChannels = audioFormat.getChannels()
         
         if(currentChannels != newChannels){
             audioSignal.setNumChannels(newChannels)
         }
         
-        _internalBuffer = new Array(audioFormat.getFrameSize() * INTERNAL_BUFFER_SIZE)
+        _internalBuffer = new Array(audioFormat.getFrameSize() * samplesPerRead)
         _internalBufferPos = _internalBuffer.size
         _sampleArray = new Array(audioFormat.getChannels())
     }
 	
-    override def getAvailableDrivers():Seq[Mixer] = {
+    override protected def getAvailableDrivers():IndexedSeq[Mixer] = {
         AudioDevice.getInputDrivers()
     }
 
-    override protected def internalGetDeviceLines():Seq[TargetDataLine] = {
-        AudioDevice.getInputDevices(_jsMixer.get).getOrElse(Seq())   
+    override protected def internalGetDeviceLines():IndexedSeq[TargetDataLine] = {
+        AudioDevice.getInputDevices(getDriver().get).getOrElse(IndexedSeq())   
     }
 
     override protected def internalOpenLine(): Unit = {
-        val line = _jsDataLine.get
-        val audioFormat = _jsAudioFormat.get
+        val line = getLine().get
+        val audioFormat = getAudioFormat().get
         
         line.open(audioFormat, _preferredDeviceBufferSize * audioFormat.getFrameSize())
     }
 
     def getSkippedSamples() = _skippedSamples
     
+    override def unpause(){
+        for(line <- getLine(); audioFormat <- getAudioFormat()){
+            line.start()
+            while(line.available() < initBufferedSamples * getAudioFormat().get.getFrameSize()){
+                //Infinite loop until there's enough samples buffered in
+                //the input device
+                //Note: yield is surrounded by ` (back single-quote) because yield is a 
+                //reserved keyword in Scala
+                Thread.`yield`()
+            }
+        }
+    }
+    
+    override def pause(){
+        getLine().foreach{line =>
+            line.stop()
+            line.flush()
+        }
+    }
+    
     override protected def process(): Unit = {
-        if(_jsDataLine.isEmpty || !_jsDataLine.get.isOpen())
+        val lineOpt = getLine()
+        if(lineOpt.isEmpty || !lineOpt.get.isOpen())
             throw new IllegalStateException("An input device must be selected and opened before it can be readFrom.")
         
         //Get a reference to the SourceDataLine (the device to output to)
-        val line = _jsDataLine.get
-        val audioFormat = _jsAudioFormat.get
+        val line = lineOpt.get
+        val audioFormat = getAudioFormat().get
         val frameSize = audioFormat.getFrameSize()
         val internalBufferSize = _internalBuffer.size
         
@@ -79,42 +131,34 @@ class InputDevice(val blockOnInputDevice:Boolean = false) extends Component with
         if(_internalBufferPos == internalBufferSize){
             val avail = line.available()
             
-            //We need to read from the input device
-            if(avail >= _internalBufferPos || blockOnInputDevice){
-                //If it is okay to wait for the input device to fill up, or if the requested amount
-                //of data is available to read, then call the read method (this will block if the 
-                //requested amount of data is not available yet)
-                line.read(_internalBuffer, 0, internalBufferSize)
-                _internalBufferPos = 0
+            //If the amount of data in the device's input
+            //buffer is greater than the maximum buffered samples,
+            //Then read in a bunch of data and throw it away
+            //This will cause skipping!
+            if(avail > maxBufferedSamples * frameSize){
+                var newAvail = avail
+                val targetBufferedSamples = (maxBufferedSamples - initBufferedSamples) / 2
+                while(newAvail > targetBufferedSamples * frameSize){
+                    line.read(_internalBuffer, 0, internalBufferSize)
+                    newAvail -= internalBufferSize
+                    _skippedSamples += internalBufferSize
+                }
             }
-            else{
-                //Otherwise, do nothing. If we don't want to block, then there's not enough
-                //data available for reading.
-            }
+            
+            //Read some data from the input device. This call is blocking if 
+            //the input device doesn't have the required data available
+            line.read(_internalBuffer, 0, internalBufferSize)
+            _internalBufferPos = 0
         }
         
-        //If we have data in the internal buffer, then convert to Floats and 
-        //write to our sample array.
-        if(_internalBufferPos < internalBufferSize){
-            //If we have data in our buffer, read and convert the next sample from our 
-            //temp buffer and write it to the _sampleArray
-	        AudioIO.copyByteArrayToSignalSample(
-	                _internalBuffer, _internalBufferPos, 
-	                _sampleArray, 
-	                frameSize, audioFormat.isBigEndian())
-	        _internalBufferPos += frameSize
-        }
-        else{
-            //Otherwise, there is no data available to read, so just write 0.0f to the 
-            //_sampleArray
-            var i = 0
-            while(i < audioFormat.getChannels()){
-            	_sampleArray(i) = 0.0f
-            	i+=1
-            }
-            _skippedSamples += 1
-        }
-
+        //read and convert the next sample from our 
+        //temp buffer and write it to the _sampleArray
+        AudioIO.copyByteArrayToSignalSample(
+                _internalBuffer, _internalBufferPos, 
+                _sampleArray, 
+                frameSize, audioFormat.isBigEndian())
+        _internalBufferPos += frameSize
+        
         //Write the value of _sampleArray to the output audioSignal
         audioSignal.write(_sampleArray) 
     }

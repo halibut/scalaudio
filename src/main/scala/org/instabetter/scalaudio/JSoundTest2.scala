@@ -42,89 +42,24 @@ object JSoundTest2 {
         val signalGen = new SquareWaveGenerator(sampleRate)
         
         //Define the output device
-        val audioOut = new OutputDevice()
+        val audioOut = new OutputDevice(blockOnOutputDevice = true)
         audioOut.setPreferredDeviceBufferSize(3000)
-        val outputDriver = audioOut.getAvailableDrivers().find{ driver =>
+        audioOut.getDriverControl().get.selectFirstMatch{driver =>
             driver.getMixerInfo().toString().contains("Speakers")
-        }.get
-        audioOut.setDriver(outputDriver)
-        val outputLine = audioOut.getAvailabileLines().head
-        audioOut.setLine(outputLine)
+        }
+        audioOut.getLineControl().get.selectValueByIndex(0)
         val outputFormat = AudioIO.createAudioFormat(sampleRate, 2, 1, true)
-        audioOut.setAudioFormat(outputFormat)
-        audioOut.openLine()
-        audioOut.startLine()
+        audioOut.getAudioFormatControl().get.setValue(outputFormat)
         
         //Wire the 3 components together
         freqSweep.signalOutput --> signalGen.frequencyControl
         signalGen.signalOutput --> audioOut.audioSignal
         
-        val components = List(freqSweep, signalGen, audioOut)
+        val ac = new AudioConfiguration()
+        ac.addComponent(freqSweep)
+        ac.addComponent(signalGen)
+        ac.addComponent(audioOut)
         
-        
-        val startTime = System.nanoTime()
-        var curTime = startTime
-        var curSample = 0L
-        var printSamples = 0L
-        
-        var bufferedSamples = 0L
-        val minBuffer = 441
-        val sleepTime = (10).asInstanceOf[Int] 
-        
-        var lastSkippedSamples = 0L
-        
-        var printTime = 0L 
-        while(true){
-            val lastTime = curTime
-            curTime = System.nanoTime()
-            val elapsedNanos = curTime - startTime
-            val elapsedSeconds = (0.000000001 * elapsedNanos)
-            
-            val lastSamples = curSample
-            val elapsedSamples = (sampleRate * elapsedSeconds).asInstanceOf[Long]
-            
-            val samplesSinceWait = elapsedSamples - lastSamples
-            curSample = elapsedSamples
-            
-            val samplesToWrite = samplesSinceWait + math.max(0, minBuffer - bufferedSamples)
-            bufferedSamples += samplesToWrite - samplesSinceWait
-            
-            //Process the signal
-            var loops = 0
-            while(loops < samplesToWrite){
-	            components.foreach(_.processSignal())
-	            components.foreach(_.propogateSignal())
-	            loops+=1
-            }
-            
-            
-            printSamples += samplesToWrite
-            if(printSamples >= (sampleRate.asInstanceOf[Int]/2)){
-                val totalSkippedSamples = audioOut.getSkippedSamples()
-                val skippedSamples = totalSkippedSamples - lastSkippedSamples
-                lastSkippedSamples = totalSkippedSamples
-                
-                val avgProcessTime = 0.000001 * printTime / printSamples
-                
-                println("Samples written: " + printSamples 
-                        + "   Samples skipped: " + skippedSamples 
-                        + "   Seconds: " + elapsedSeconds
-                		+ "   Avg Process Time: " + avgProcessTime +" ms")
-                println(signalGen.getFrequency() + " Hz   Samples: " + printSamples + "   Seconds: " + elapsedSeconds)
-                printSamples -= (sampleRate.asInstanceOf[Int]/2).asInstanceOf[Long]
-                printTime = 0L
-            }
-            
-            val endTime = System.nanoTime()
-            val diffTime = endTime - curTime
-            printTime += diffTime
-            val processTime = (0.000000001 * (diffTime)).asInstanceOf[Int]
-            val adjustedSleepTime = sleepTime - processTime
-            
-            if(adjustedSleepTime > 0){
-            	Thread.sleep(adjustedSleepTime)
-            }
-        }
+        ac.start()
     }
-    
 }

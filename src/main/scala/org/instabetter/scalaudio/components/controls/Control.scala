@@ -22,6 +22,8 @@ abstract class Control extends Identity{
 
     name = "Control"
     description = "Controls the function of a Component"
+        
+    def isConfigured():Boolean
 }
 
 class FloatControl(
@@ -35,4 +37,42 @@ class FloatControl(
     
     def getValue():Float = { _controlValue }
     def setValue(value:Float) { _controlValue = math.max(min, math.min(value, max)) }
+    
+    override def isConfigured():Boolean = true
+}
+
+class EnumControl[T](val options:IndexedSeq[T]) extends Control{
+    private var _controlValue:Option[T] = None 
+    
+    def getValue():Option[T] = { _controlValue }
+    def setValue(value:T) { 
+        if(options.exists(enumsEqual(_,value))){
+            _controlValue = Some(value) 
+        } 
+        onChangeValue(value)
+    }
+    
+    def selectValueByIndex(index:Int) = {
+        val value = options(index)
+        setValue(value)
+    }
+    
+    def selectFirstMatch(matchFunc:(T)=>Boolean) = {
+        val selectedOpt = options.find(matchFunc)
+        selectedOpt.foreach(setValue(_))
+    }
+    
+    def onChangeValue(newValue:T){ }
+    
+    def display(enum:T):String = {
+        enum.toString()
+    }
+    
+    def enumsEqual(option:T, selectedValue:T):Boolean ={
+        option == selectedValue
+    }
+    
+    override def isConfigured():Boolean = {
+        _controlValue.isDefined
+    }
 }

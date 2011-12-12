@@ -18,16 +18,68 @@ package org.instabetter.scalaudio
 
 import components._
 
-trait AudioConfiguration {
+class AudioConfiguration {
 	protected var _components:Vector[Component] = Vector()
+	private var _calcStatistics:Boolean = false
+	private var _started:Boolean = false
+	private var _running:Boolean = false
+	
+	
 	
 	def addComponent(component:Component){
 	    if(!_components.contains(component))
 	        _components :+= component
 	}
 	
-	
 	def getComponents() = { _components }
 	
-	def run():Unit
+	def start(){
+	    if(!_started){
+		    _components.foreach{comp =>
+		        comp.start()
+		    }
+		    _started = true
+	    }
+	    else if(!_running){
+	        _components.foreach{comp =>
+		        comp.unpause()
+		    }
+	    }
+	    _running = true
+	    
+	    while(_running){
+	        _components.foreach{comp=>
+		        comp.processSignal()
+		    }
+		    
+		    _components.foreach{comp=>
+		        comp.propogateSignal()
+		    }
+	    }
+	    
+	    _components.foreach{comp =>
+		    comp.pause()
+		}
+	    
+	    if(_started){
+	        _components.foreach{comp =>
+		        comp.stop()
+		    }
+	    }
+	}
+	
+	def pause(){
+	    _running = false
+	}
+	
+	def stop(){
+	    if(_started && !_running){
+	        _components.foreach{comp =>
+		        comp.stop()
+		    }
+	    }
+	    
+	    _running = false
+	    _started = false
+	}
 }

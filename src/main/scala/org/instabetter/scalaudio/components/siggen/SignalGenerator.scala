@@ -44,5 +44,4 @@ abstract class SignalGenerator(val sampleRate:Float, cycleOffset:Float)
     }
     
     protected def signalFunc(cyclePos:Float):Float
-    
 }
