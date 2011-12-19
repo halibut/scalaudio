@@ -61,7 +61,7 @@ class InputDevice(val samplesPerRead:Int = 8, val initBufferedSamples:Int = 64, 
 	private var _sampleArray:Array[Float] = null
 	
 	//Create the audio signal that stores the data read from the input device
-    val audioSignal = new OutputSignal(1)
+    val audioSignal = new OutputSignal(this, 1)
     addOutput(audioSignal)
     
     override def audioFormatChanged(){

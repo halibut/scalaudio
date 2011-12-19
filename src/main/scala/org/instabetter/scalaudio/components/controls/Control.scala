@@ -18,7 +18,7 @@ package org.instabetter.scalaudio
 package components
 package controls
 
-abstract class Control extends Identity{
+abstract class Control(val component:Component) extends ComponentPort with Identity{
 
     name = "Control"
     description = "Controls the function of a Component"
@@ -27,21 +27,27 @@ abstract class Control extends Identity{
 }
 
 class FloatControl(
+        component:Component,
         val min:Float = Float.MinValue, 
         val max:Float = Float.MaxValue,
-        startValue:Float = 0.0f) extends Control{
+        startValue:Float = 0.0f) extends Control(component) with ConnectableFrom[Float,Array[Float]]{
     
     require(min <= max, "Min value must be less than max value.")
     
-    private var _controlValue:Float = math.max(min, math.min(startValue, max))
+    val connectionOwner = component
     
-    def getValue():Float = { _controlValue }
-    def setValue(value:Float) { _controlValue = math.max(min, math.min(value, max)) }
+    override def setValue(value:Float) { super.setValue(math.max(min, math.min(value, max))) }
     
     override def isConfigured():Boolean = true
+    
+    override def convert(sigVal:Array[Float]):Float = {
+        sigVal(0)
+    }
+    
+    override def getDefaultValue():Float = startValue
 }
 
-class EnumControl[T](val options:IndexedSeq[T]) extends Control{
+class EnumControl[T](component:Component, val options:IndexedSeq[T]) extends Control(component){
     private var _controlValue:Option[T] = None 
     
     def getValue():Option[T] = { _controlValue }

@@ -40,10 +40,12 @@ self:Component with ComponentControls =>
 	    }
 	} 
 
+	private val audioDevice = this
+	
 	//Setup controls for selecting driver, line, and audio format
 	{
 	    //Selection for the driver
-	    val driverControl = new EnumControl[Mixer](getAvailableDrivers()){
+	    val driverControl = new EnumControl[Mixer](audioDevice, getAvailableDrivers()){
 	        name = "Driver"
 	        description = "Select the driver for this AudioDevice"
 	        private var lineControl:EnumControl[DL] = null
@@ -54,7 +56,7 @@ self:Component with ComponentControls =>
 	            }
 	            
 	            //Selection for the Line
-	            lineControl = new EnumControl[DL](internalGetDeviceLines()){
+	            lineControl = new EnumControl[DL](audioDevice, internalGetDeviceLines()){
 	                name = "Line"
 	                description = "Select the Line for this AudioDevice"
 	                private var audioFormatControl:EnumControl[AudioFormat] = null
@@ -65,7 +67,7 @@ self:Component with ComponentControls =>
 	                    }
 	                    
 	                    //Selection for the AudioFormat
-	                    audioFormatControl = new EnumControl(getAvailableAudioFormats()){
+	                    audioFormatControl = new EnumControl(audioDevice, getAvailableAudioFormats()){
 	                        name = "Audio Format"
 	                        description = "Select the audio format for this AudioDevice"
 	                            

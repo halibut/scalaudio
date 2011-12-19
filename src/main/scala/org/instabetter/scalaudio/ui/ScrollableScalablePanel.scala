@@ -20,6 +20,7 @@ import scala.swing.event.MouseReleased
 class ScrollableScalablePanel extends ScrollPane{
     val scalablePanel = new ScalablePanel()
     contents = scalablePanel
+    this.peer.setWheelScrollingEnabled(false)
     
     private var prevMouseDragPos:Point = null
     private var dragging = false
@@ -54,6 +55,7 @@ class ScrollableScalablePanel extends ScrollPane{
 				        val newPosY = pos.y + (yDrag / zoom).asInstanceOf[Int]
 				        scalablePanel.moveComponent(comp, new PositionConstraint(newPosX, newPosY))
 				        scalablePanel.revalidate()
+				        repaint()
 				        if(newPosX < 0 || newPosY < 0){
 				            Thread.sleep(100)
 				        }
@@ -68,10 +70,11 @@ class ScrollableScalablePanel extends ScrollPane{
     reactions += {
 		case e:MouseWheelMoved => {
 		    if(e.source == this){
-		        val zoom = e.rotation * 0.1f
-				scalablePanel.setZoom(scalablePanel.getZoom() - zoom)
+		        val zoom = -e.rotation * 0.1f
+		        scalablePanel.setZoom(scalablePanel.getZoom() + zoom)
+		        scalablePanel.revalidate()
+		        repaint()
 		    }
-		    
 		}
 		case e:MousePressed => {
 		    if(e.source == this && e.peer.getButton() == MouseEvent.BUTTON1){
@@ -95,5 +98,13 @@ class ScrollableScalablePanel extends ScrollPane{
 		}
 	}
 
+    def setScrollPosition(x:Int,y:Int){
+        horizontalScrollBar.value = x
+        verticalScrollBar.value = y
+    }
+    
+    def getScrollPosition():(Int,Int) = {
+        (horizontalScrollBar.value, verticalScrollBar.value)
+    }
 }
 

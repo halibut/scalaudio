@@ -19,9 +19,9 @@ package components
 package controls
 
 trait AmplitudeOffsetControl {
-self:ComponentControls with ComponentOutputs =>
+self:Component with ComponentControls with ComponentOutputs =>
     
-    val amplitudeOffsetControl = new FloatControl()
+    val amplitudeOffsetControl = new FloatControl(this)
     amplitudeOffsetControl.name = "Amplitude Offset"
     amplitudeOffsetControl.description = "Adds the specified offset to the signal."
     amplitudeOffsetControl.setValue(0.0f)

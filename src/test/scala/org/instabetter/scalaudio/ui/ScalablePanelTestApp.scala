@@ -19,53 +19,59 @@ object ScalablePanelTestApp extends SimpleSwingApplication {
         title = "Hello, World!"
 		contents = new ScrollPane(
             new ScrollableScalablePanel {
-	        	add(new Button("Button"), 50,50)
-	        	add(new Button("Button2"), 50,250, true)
-	        	add(new Label("Label"), 300,150, true)
-	        	add(new IOPortComponent(Color.BLACK, TopSidePort), 30, 400, true)
-	        	add(new IOPortComponent(Color.RED, LeftSidePort), 400, 350, true)
-	        	add(new IOPortComponent(Color.GREEN, RightSidePort), 150, 150, true)
 	        	
 	        	val audioComp1 = new DummyComponent() with ComponentInputs with ComponentOutputs with ComponentControls{
-	        	    addInput(new Signal(1))
-	        	    addInput(new Signal(1))
-	        	    addInput(new Signal(1))
-	        	    addOutput(new OutputSignal(1))
-	        	    addOutput(new OutputSignal(1))
-	        	    addOutput(new OutputSignal(1))
-	        	    addControl(new FloatControl())
+	        	    name = "Comp 1"
+	        	    addInput(new InputSignal(this, 1))
+	        	    addInput(new InputSignal(this, 1))
+	        	    addInput(new InputSignal(this, 1))
+	        	    addOutput(new OutputSignal(this, 1))
+	        	    addOutput(new OutputSignal(this, 1))
+	        	    addOutput(new OutputSignal(this, 1))
+	        	    addControl(new FloatControl(this))
 	        	}
 	        	
 	        	val audioComp2 = new DummyComponent() with ComponentInputs with ComponentOutputs{
-	        	    addInput(new Signal(1))
-	        	    addInput(new Signal(1))
-	        	    addInput(new Signal(1))
-	        	    addOutput(new OutputSignal(1))
+	        	    name = "Component 2"
+	        	    addInput(new InputSignal(this, 1))
+	        	    addInput(new InputSignal(this, 1))
+	        	    addInput(new InputSignal(this, 1))
+	        	    addOutput(new OutputSignal(this, 1))
 	        	}
 	        	
 	        	val audioComp3 = new DummyComponent() with ComponentInputs with ComponentControls{
-	        	    addInput(new Signal(1))
-	        	    addInput(new Signal(1))
-	        	    addControl(new FloatControl())
-	        	    addControl(new FloatControl())
-	        	    addControl(new FloatControl())
+	        	    name = "Comp 3"
+	        	    addInput(new InputSignal(this, 1))
+	        	    addInput(new InputSignal(this, 1))
+	        	    addControl(new FloatControl(this))
+	        	    addControl(new FloatControl(this))
+	        	    addControl(new FloatControl(this))
 	        	}
 	        	
 	        	val audioComp4 = new SawWaveGenerator(44100f)
+	        	
+	        	audioComp1.outputs(0) --> audioComp3.inputs(0)
+	        	audioComp1.outputs(0) --> audioComp2.inputs(0)
+	        	audioComp2.outputs(0) --> audioComp3.inputs(1)
+	        	audioComp4.outputs(0) --> audioComp3.controls(2).asInstanceOf[FloatControl]
 	        	
 	        	add(new ComponentUI(audioComp1), 300, 250, true)
 	        	add(new ComponentUI(audioComp2), 20, 20, true)
 	        	add(new ComponentUI(audioComp3), 300, 20, true)
 	        	add(new ComponentUI(audioComp4), 75, 120, true)
+	        	
+	        	
 			}
         )
         
         
     }
+    
+    class DummyComponent extends Component {
+	    override def process(){
+	        
+	    }
+	}
 }
 
-class DummyComponent extends Component {
-    override def process(){
-        
-    }
-}
+

@@ -19,6 +19,6 @@ package components
 package controls
 
 trait SignalOutputControls extends GainControl with AmplitudeOffsetControl {
-    self:ComponentOutputs with ComponentControls =>
+    self:Component with ComponentOutputs with ComponentControls =>
 
 }

@@ -19,24 +19,28 @@ package components
 
 import controls._
 
-class OutputSignal(numChannels:Int = 1) extends Signal(numChannels){
-    private var _wires:Vector[Signal] = Vector()
+class OutputSignal(owner:Component, numChannels:Int = 1) extends ConnectableTo[Array[Float]] with Signal{
+    val connectionOwner = owner
     
-    def sendSignalToWires(){
-        _wires.foreach{ _.updateFrom(this) }
+    def wireTo(signal:InputSignal){ 
+        signal.connectFrom(this)
     }
-    
-    def wireTo(signal:Signal){ 
-        _wires :+= signal
-        signal.addPropertyChangeListener(wirePropertyChangeListener)
+    def wireTo(control:FloatControl){ 
+        control.connectFrom(this)
     }
-    def wireTo(control:FloatControl){ wireTo(new SignalDrivenControl(control)) }
-    def -->(signal:Signal){ wireTo(signal) }
+    def -->(signal:InputSignal){ wireTo(signal) }
     def -->(control:FloatControl){ wireTo(control) }
+
+    override protected def getDefaultValue():Array[Float] = {
+        new Array[Float](numChannels)
+    }
     
-    
-    def wirePropertyChangeListener(wire:Signal){
-        _wires = _wires.filterNot(_ == wire)
-        wire.removePropertyChangeListener(wirePropertyChangeListener)
+    override def setNumChannels(numChannels:Int){
+        if(numChannels != channels()){
+	        for(connection <- getConnectedTo){
+	            connection.disconnect()
+	        }
+        }
+        setValue(new Array[Float](numChannels))
     }
 }

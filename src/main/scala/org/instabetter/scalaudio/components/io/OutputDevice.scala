@@ -44,7 +44,7 @@ class OutputDevice(val blockOnOutputDevice:Boolean = false)
 	private var _skippedSamples = 0L
 	
 	//Create the audio signal that contains the data to send to the output device
-    val audioSignal = new Signal(2)
+    val audioSignal = new InputSignal(this, 2)
     addInput(audioSignal)
     
     //Add a pre-processor to cutoff the data beyond the range [-1.0 , 1.0]

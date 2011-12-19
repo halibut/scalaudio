@@ -19,9 +19,9 @@ package components
 package controls
 
 trait FrequencyControl {
-self:ComponentControls =>
+self:Component with ComponentControls =>
     
-    val frequencyControl = new FloatControl(startValue = 0.0f)
+    val frequencyControl = new FloatControl(this, startValue = 0.0f)
     frequencyControl.name = "Frequency"
     frequencyControl.description = "Sets the frequency of the component."
     

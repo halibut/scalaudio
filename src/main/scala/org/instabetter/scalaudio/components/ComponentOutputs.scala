@@ -23,10 +23,10 @@ self:Component =>
     private var _signalPostProcessors:Vector[Function1[Float,Float]] = Vector()
     private var _outputs:Vector[OutputSignal] = Vector()
         
-    def outputs():IndexedSeq[OutputSignal] = _outputs
+    def outputs:IndexedSeq[OutputSignal] = _outputs
     
     protected def addOutput(output:OutputSignal){ _outputs :+= output }
-    protected def removeOutput(output:Signal){ _outputs = _outputs.filterNot(_ eq output) }
+    protected def removeOutput(output:OutputSignal){ _outputs = _outputs.filterNot(_ eq output) }
     protected def removeOutput(index:Int){ removeOutput(_outputs(index)) }
     protected def removeOutput(name:String){ _outputs = _outputs.filterNot(_.name eq name) }
     
@@ -46,6 +46,6 @@ self:Component =>
     }
     
     override def propogateSignal(){
-        _outputs.foreach( output=> output.sendSignalToWires())
+        _outputs.foreach( output => output.propogateValue())
     }
 }

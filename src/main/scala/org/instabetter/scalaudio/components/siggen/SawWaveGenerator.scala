@@ -20,6 +20,7 @@ package siggen
 
 class SawWaveGenerator(sampleRate:Float, cycleOffset:Float = 0f) 
 		extends SignalGenerator(sampleRate,cycleOffset) {
+    name = "Saw Wave"
 
     signalOutput.name = "Saw Wave Output"
     signalOutput.description = "The output signal from the saw wave generator."

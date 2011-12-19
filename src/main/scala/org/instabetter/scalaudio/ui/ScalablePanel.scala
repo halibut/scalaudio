@@ -15,6 +15,7 @@ import java.awt.Point
 import scala.swing.event.MousePressed
 import java.awt.event.MouseEvent
 import scala.swing.event.MouseReleased
+import java.awt.Graphics2D
 
 
 
@@ -25,6 +26,8 @@ class ScalablePanel() extends Panel with LayoutContainer {
 	type Constraints = PositionConstraint
 	
 	private var _components:Set[SwingComponent] = Set()
+	
+	private var _drawFunc:Option[(Graphics2D)=>Unit] = None
 	
 	def constraintsFor(comp: SwingComponent): Constraints =
 		layoutManager.getConstraints(comp.peer)
@@ -59,4 +62,13 @@ class ScalablePanel() extends Panel with LayoutContainer {
         revalidate() 
     }
     def getZoom():Float = { layoutManager.getZoom() }
+    
+    def setDrawFunc(drawFunc:(Graphics2D)=>Unit){
+        _drawFunc = Option(drawFunc)
+    }
+    
+    override def paintComponent(g:Graphics2D){
+        super.paintComponent(g)
+        _drawFunc.foreach{_(g)}
+    }
 }

@@ -19,9 +19,9 @@ package components
 package controls
 
 trait GainControl {
-self:ComponentControls with ComponentOutputs =>
+self:Component with ComponentControls with ComponentOutputs =>
     
-    val gainControl = new FloatControl(startValue = 1.0f)
+    val gainControl = new FloatControl(this, 1.0f)
     gainControl.name = "Gain"
     gainControl.description = "Amplifies the output by the specified amount."
         

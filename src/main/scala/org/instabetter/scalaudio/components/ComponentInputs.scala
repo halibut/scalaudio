@@ -21,12 +21,12 @@ trait ComponentInputs {
 self:Component =>
 	
     private var _signalPreProcessors:Vector[Function1[Float,Float]] = Vector()
-    private var _inputs:Vector[Signal] = Vector()
+    private var _inputs:Vector[InputSignal] = Vector()
         
-    def inputs():IndexedSeq[Signal] = _inputs
+    def inputs:IndexedSeq[InputSignal] = _inputs
     
-    protected def addInput(input:Signal){ _inputs :+= input }
-    protected def removeInput(input:Signal){ _inputs = _inputs.filterNot(_ eq input) }
+    protected def addInput(input:InputSignal){ _inputs :+= input }
+    protected def removeInput(input:InputSignal){ _inputs = _inputs.filterNot(_ eq input) }
     protected def removeInput(index:Int){ removeInput(_inputs(index)) }
     protected def removeInput(name:String){ _inputs = _inputs.filterNot(_.name eq name) }
     

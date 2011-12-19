@@ -33,6 +33,22 @@ class AudioConfiguration {
 	
 	def getComponents() = { _components }
 	
+	def getConnections():Set[(OutputSignal,ConnectableFrom[Any,Array[Float]])] = {
+	    var connections:Set[(OutputSignal,ConnectableFrom[Any,Array[Float]])] = Set()
+	    
+	    for(outComp <- _components;
+        	if(outComp.isInstanceOf[ComponentOutputs])){
+            
+	        val outputs = outComp.asInstanceOf[ComponentOutputs].outputs
+            for(output <- outputs;
+            	connection <- output.getConnectedTo()){
+                
+                connections += ((output, connection.asInstanceOf[ConnectableFrom[Any,Array[Float]]]))
+            }
+        }
+	    connections
+	}
+	
 	def start(){
 	    if(!_started){
 		    _components.foreach{comp =>

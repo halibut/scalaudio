@@ -28,7 +28,7 @@ abstract class SignalGenerator(val sampleRate:Float, cycleOffset:Float)
     
     private var _cycle = cycleOffset % 1.0f
     
-    val signalOutput = new OutputSignal(1)
+    val signalOutput = new OutputSignal(this, 1)
     addOutput(signalOutput)
     
     override protected def process():Unit = {
@@ -40,7 +40,7 @@ abstract class SignalGenerator(val sampleRate:Float, cycleOffset:Float)
         if(_cycle > 1.0f)
             _cycle = _cycle % 1.0f
         
-        outputs().foreach(_.write(signal))
+        outputs.foreach(_.write(signal))
     }
     
     protected def signalFunc(cyclePos:Float):Float
