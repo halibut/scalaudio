@@ -15,6 +15,7 @@ import java.awt.Point
 import scala.swing.event.MousePressed
 import java.awt.event.MouseEvent
 import scala.swing.event.MouseReleased
+import scala.swing.event.MouseMoved
 
 
 class ScrollableScalablePanel extends ScrollPane{
@@ -22,8 +23,8 @@ class ScrollableScalablePanel extends ScrollPane{
     contents = scalablePanel
     this.peer.setWheelScrollingEnabled(false)
     
-    private var prevMouseDragPos:Point = null
     private var dragging = false
+    private var mousePressPos:Point = null
     
     
     def add(comp:SwingComponent, x:Int, y:Int, moveable:Boolean = false){
@@ -34,9 +35,9 @@ class ScrollableScalablePanel extends ScrollPane{
             listenTo(comp.mouse.clicks, comp.mouse.moves)
             
 	        reactions += {
-	            case e:MousePressed => {
+                case e:MousePressed => {
 	                if(e.source == comp && e.peer.getButton() == MouseEvent.BUTTON1){
-	                    prevMouseDragPos = e.point
+	                    mousePressPos = e.point
 	                    dragging = true
 	                }
 	            }
@@ -47,8 +48,8 @@ class ScrollableScalablePanel extends ScrollPane{
 				}
 				case e:MouseDragged => {
 				    if(e.source == comp && dragging){
-				        val xDrag = e.point.getX() - prevMouseDragPos.getX()
-				        val yDrag = e.point.getY() - prevMouseDragPos.getY()
+				        val xDrag = e.point.getX() - mousePressPos.getX()
+				        val yDrag = e.point.getY() - mousePressPos.getY()
 				        val zoom = scalablePanel.getZoom()
 				        val pos = scalablePanel.constraintsFor(comp)
 				        val newPosX = pos.x + (xDrag / zoom).asInstanceOf[Int]
@@ -78,7 +79,7 @@ class ScrollableScalablePanel extends ScrollPane{
 		}
 		case e:MousePressed => {
 		    if(e.source == this && e.peer.getButton() == MouseEvent.BUTTON1){
-		        prevMouseDragPos = e.point
+		        mousePressPos = e.point
 		        dragging = true
 		    }
 		}
@@ -89,11 +90,11 @@ class ScrollableScalablePanel extends ScrollPane{
 		}
 		case e:MouseDragged => {
 		    if(e.source == this && dragging){
-		        val xDrag = e.point.getX() - prevMouseDragPos.getX()
-		        val yDrag = e.point.getY() - prevMouseDragPos.getY()
+		        val xDrag = e.point.getX() - mousePressPos.getX()
+		        val yDrag = e.point.getY() - mousePressPos.getY()
 		        horizontalScrollBar.value -= xDrag.asInstanceOf[Int]
 		        verticalScrollBar.value -= yDrag.asInstanceOf[Int]
-		        prevMouseDragPos = e.point
+		        mousePressPos = e.point
 		    }
 		}
 	}
@@ -106,5 +107,6 @@ class ScrollableScalablePanel extends ScrollPane{
     def getScrollPosition():(Int,Int) = {
         (horizontalScrollBar.value, verticalScrollBar.value)
     }
+    
 }
 

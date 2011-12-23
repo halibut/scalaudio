@@ -22,7 +22,7 @@ import scala.collection.mutable.ArrayBuffer
 class InputSignal(owner:Component, numChannels:Int = 1) extends ConnectableFrom[Array[Float],Array[Float]] with Signal{
     require(numChannels > 0, "A signal must contain 1 or more channels")
     
-    val connectionOwner = owner
+    val portOwner = owner
     
     def setNumChannels(numChannels:Int){
         require(numChannels > 0, "A signal must contain 1 or more channels")

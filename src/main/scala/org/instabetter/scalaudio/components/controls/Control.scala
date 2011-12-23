@@ -19,11 +19,14 @@ package components
 package controls
 
 abstract class Control(val component:Component) extends ComponentPort with Identity{
-
+	val portOwner = component
+    
     name = "Control"
     description = "Controls the function of a Component"
         
     def isConfigured():Boolean
+    
+    def controlValueText():String
 }
 
 class FloatControl(
@@ -34,8 +37,6 @@ class FloatControl(
     
     require(min <= max, "Min value must be less than max value.")
     
-    val connectionOwner = component
-    
     override def setValue(value:Float) { super.setValue(math.max(min, math.min(value, max))) }
     
     override def isConfigured():Boolean = true
@@ -45,6 +46,17 @@ class FloatControl(
     }
     
     override def getDefaultValue():Float = startValue
+    
+    override def controlValueText():String = {
+        val connectedFromOpt = this.getConnectedFrom()
+        if(connectedFromOpt.isDefined){
+            val connectedFrom = connectedFromOpt.get
+            "Connected to: " + connectedFrom.portOwner.name + " - " + connectedFrom.name
+        }
+        else{
+            getValue().toString()
+        }
+    } 
 }
 
 class EnumControl[T](component:Component, val options:IndexedSeq[T]) extends Control(component){
@@ -81,4 +93,8 @@ class EnumControl[T](component:Component, val options:IndexedSeq[T]) extends Con
     override def isConfigured():Boolean = {
         _controlValue.isDefined
     }
+    
+    override def controlValueText():String = {
+        getValue().toString()
+    } 
 }

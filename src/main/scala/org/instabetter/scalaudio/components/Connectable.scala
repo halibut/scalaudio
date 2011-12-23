@@ -18,8 +18,7 @@ package org.instabetter.scalaudio
 package components
 import scala.annotation.implicitNotFound
 
-trait Connectable[T] extends Identity{
-    val connectionOwner:Component
+trait Connectable[T] extends ComponentPort{
     
     private var _value:T = getDefaultValue()
     

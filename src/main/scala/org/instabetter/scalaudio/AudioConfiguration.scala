@@ -33,8 +33,8 @@ class AudioConfiguration {
 	
 	def getComponents() = { _components }
 	
-	def getConnections():Set[(OutputSignal,ConnectableFrom[Any,Array[Float]])] = {
-	    var connections:Set[(OutputSignal,ConnectableFrom[Any,Array[Float]])] = Set()
+	def getConnections():Set[(ComponentPort,ComponentPort)] = {
+	    var connections:Set[(ComponentPort,ComponentPort)] = Set()
 	    
 	    for(outComp <- _components;
         	if(outComp.isInstanceOf[ComponentOutputs])){
@@ -43,7 +43,7 @@ class AudioConfiguration {
             for(output <- outputs;
             	connection <- output.getConnectedTo()){
                 
-                connections += ((output, connection.asInstanceOf[ConnectableFrom[Any,Array[Float]]]))
+                connections += ((output, connection))
             }
         }
 	    connections

@@ -136,8 +136,8 @@ class ComponentUI(val component:Component) extends ScalablePanel{
         _controlPorts(ind)
     }
     
-    def getConnectablePorts():Seq[IOPortComponent] = {
-        _inputPorts ++ _outputPorts ++ _controlPorts.filter(_.port.isInstanceOf[Connectable[_]])
+    def getPorts():Seq[IOPortComponent] = {
+        _inputPorts ++ _outputPorts ++ _controlPorts
     }
     
     

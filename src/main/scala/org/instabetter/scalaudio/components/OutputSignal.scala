@@ -20,7 +20,7 @@ package components
 import controls._
 
 class OutputSignal(owner:Component, numChannels:Int = 1) extends ConnectableTo[Array[Float]] with Signal{
-    val connectionOwner = owner
+    val portOwner = owner
     
     def wireTo(signal:InputSignal){ 
         signal.connectFrom(this)
